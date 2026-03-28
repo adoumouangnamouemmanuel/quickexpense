@@ -1,9 +1,12 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+
+/* Ensure `dark:` utilities follow next-themes `.dark` class toggling */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ─── Tailwind v4 theme tokens ─────────────────────────────────────────────── */
 @theme {
-  --font-sans: 'Inter', 'system-ui', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: "Inter", "system-ui", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* Brand colors (Apple-like neutral/slate) */
   --color-brand-50: #f8fafc;
@@ -26,14 +29,16 @@
   --color-surface-2: #ffffff;
   --color-surface-3: #e5e5ea;
   --color-surface-glass: rgba(255, 255, 255, 0.75);
-  
+
   /* Radius */
   --radius-card: 1.5rem;
   --radius-btn: 9999px; /* Pill default */
 
   /* Shadows */
-  --shadow-card: 0 4px 24px -4px rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.03);
-  --shadow-card-hover: 0 10px 32px -4px rgb(0 0 0 / 0.08), 0 4px 8px -2px rgb(0 0 0 / 0.04);
+  --shadow-card:
+    0 4px 24px -4px rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.03);
+  --shadow-card-hover:
+    0 10px 32px -4px rgb(0 0 0 / 0.08), 0 4px 8px -2px rgb(0 0 0 / 0.04);
   --shadow-glass: 0 8px 32px 0 rgb(0 0 0 / 0.05);
 }
 
@@ -43,15 +48,27 @@
   --color-surface-2: #1c1c1e;
   --color-surface-3: #2c2c2e;
   --color-surface-glass: rgba(28, 28, 30, 0.75);
-  
+
   --shadow-card: 0 4px 24px -4px rgb(0 0 0 / 0.3), 0 1px 3px 0 rgb(0 0 0 / 0.2);
-  --shadow-card-hover: 0 10px 32px -4px rgb(0 0 0 / 0.5), 0 4px 8px -2px rgb(0 0 0 / 0.3);
+  --shadow-card-hover:
+    0 10px 32px -4px rgb(0 0 0 / 0.5), 0 4px 8px -2px rgb(0 0 0 / 0.3);
   --shadow-glass: 0 8px 32px 0 rgb(0 0 0 / 0.4);
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+/* Hide scrollbar for horizontal swipeable containers */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 html {
@@ -64,7 +81,9 @@ body {
   background-color: var(--color-surface);
   color: oklch(0.15 0.01 265);
   font-family: var(--font-sans);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .dark body {
@@ -84,7 +103,7 @@ body {
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.60 0.01 265 / 0.7);
+  background: oklch(0.6 0.01 265 / 0.7);
 }
 
 /* ─── Card component ────────────────────────────────────────────────────────── */
@@ -95,7 +114,9 @@ body {
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-glass);
   padding: 1.5rem;
-  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid var(--color-surface-3);
 }
 .dark .card {
@@ -177,7 +198,7 @@ body {
   color: white;
 }
 .btn-danger:hover {
-  background-color: oklch(0.50 0.22 25);
+  background-color: oklch(0.5 0.22 25);
 }
 .btn-ghost {
   background: transparent;
@@ -205,22 +226,24 @@ body {
   color: inherit;
   font-size: 0.9375rem;
   font-family: inherit;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
   outline: none;
 }
 .input::placeholder {
-  color: oklch(0.60 0.01 265);
+  color: oklch(0.6 0.01 265);
 }
 .input:focus {
-  border-color: oklch(0.60 0.22 265);
-  box-shadow: 0 0 0 3px oklch(0.60 0.22 265 / 0.12);
+  border-color: oklch(0.6 0.22 265);
+  box-shadow: 0 0 0 3px oklch(0.6 0.22 265 / 0.12);
 }
 .dark .input {
-  border-color: oklch(0.30 0.02 265);
+  border-color: oklch(0.3 0.02 265);
   background-color: var(--color-surface-3);
 }
 .dark .input:focus {
-  border-color: oklch(0.60 0.22 265);
+  border-color: oklch(0.6 0.22 265);
 }
 
 /* ─── Label ──────────────────────────────────────────────────────────────────── */
@@ -317,7 +340,11 @@ body {
   width: 3.5rem;
   height: 3.5rem;
   border-radius: 9999px;
-  background: linear-gradient(135deg, oklch(0.52 0.24 265), oklch(0.44 0.22 285));
+  background: linear-gradient(
+    135deg,
+    oklch(0.52 0.24 265),
+    oklch(0.44 0.22 285)
+  );
   color: white;
   box-shadow: 0 8px 32px oklch(0.52 0.24 265 / 0.45);
   border: none;
@@ -386,7 +413,11 @@ body {
 }
 
 .nav-item.active {
-  background: linear-gradient(135deg, oklch(0.52 0.24 265 / 0.12), oklch(0.60 0.22 265 / 0.06));
+  background: linear-gradient(
+    135deg,
+    oklch(0.52 0.24 265 / 0.12),
+    oklch(0.6 0.22 265 / 0.06)
+  );
   color: oklch(0.52 0.24 265);
   font-weight: 600;
 }
@@ -397,8 +428,12 @@ body {
 
 /* ─── Animations ─────────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -424,8 +459,13 @@ body {
 }
 
 @keyframes pulse-gentle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .animate-pulse-gentle {
@@ -473,8 +513,12 @@ body {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ─── Divider ────────────────────────────────────────────────────────────────── */

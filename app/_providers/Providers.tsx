@@ -1,17 +1,22 @@
-'use client';
+"use client";
 
 // Root providers wrapper for QuickExpense
 // Wraps all client-side context providers
-import { ThemeProvider } from 'next-themes';
-import { Toaster } from 'sonner';
-import { LanguageProvider } from '../_lib/i18n';
-import type { ReactNode } from 'react';
-import { PWARegister } from '../_components/PWARegister';
-import { AuthProvider } from '../_lib/auth';
+import { ThemeProvider } from "next-themes";
+import type { ReactNode } from "react";
+import { Toaster } from "sonner";
+import { PWARegister } from "../_components/PWARegister";
+import { AuthProvider } from "../_lib/auth";
+import { LanguageProvider } from "../_lib/i18n";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="light"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
       <AuthProvider>
         <LanguageProvider>
           <PWARegister />
@@ -20,7 +25,7 @@ export function Providers({ children }: { children: ReactNode }) {
             position="bottom-right"
             toastOptions={{
               style: {
-                fontFamily: 'inherit',
+                fontFamily: "inherit",
               },
             }}
             richColors

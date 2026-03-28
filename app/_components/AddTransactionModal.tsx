@@ -247,19 +247,8 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mt-6">
+        <div className="flex gap-2 sm:justify-end mt-6">
           <button className="btn btn-secondary w-full sm:w-auto" onClick={onClose} id="tx-cancel-btn">{t.cancel}</button>
-          
-          {!editTx && (
-            <button
-              className="btn w-full sm:w-auto bg-[var(--color-surface-2)] border border-[var(--color-surface-3)] hover:bg-[var(--color-surface-3)] font-medium transition-colors cursor-pointer"
-              onClick={() => handleSave(true)}
-              disabled={saving}
-            >
-              {saving ? '…' : 'Save & Add Another'}
-            </button>
-          )}
-
           <button
             className="btn btn-primary w-full sm:w-auto"
             onClick={() => handleSave(false)}

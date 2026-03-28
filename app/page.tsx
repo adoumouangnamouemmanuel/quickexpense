@@ -1,103 +1,146 @@
-'use client';
+"use client";
 
 // Dashboard – Home Page
-import { useState, useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { TrendingUp, TrendingDown, Wallet, Sparkles, Trash2, Activity } from 'lucide-react';
-import { toast } from 'sonner';
-import { db } from './_lib/db';
-import { useLanguage } from './_lib/i18n';
-import { formatCurrency, currentMonthISO } from './_lib/utils';
-import { DEFAULT_CATEGORIES, seedCategories } from './_lib/categories';
-import { AppShell } from './_components/AppShell';
-import Link from 'next/link';
-import { AddTransactionModal } from './_components/AddTransactionModal';
-import { FAB } from './_components/FAB';
-import { BudgetProgress } from './_components/BudgetProgress';
-import { ExpensePieChart, CategoryLegend, SpendingLineChart } from './_components/Charts';
-import { TransactionList } from './_components/TransactionList';
+import { useLiveQuery } from "dexie-react-hooks";
+import {
+  Activity,
+  Star,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback } from "react";
+import { toast } from "sonner";
+import { AppShell } from "./_components/AppShell";
+import { BudgetProgress } from "./_components/BudgetProgress";
+import {
+  CategoryLegend,
+  ExpensePieChart,
+  SpendingLineChart,
+} from "./_components/Charts";
+import { FAB } from "./_components/FAB";
+import { TransactionList } from "./_components/TransactionList";
+import { useAuth } from "./_lib/auth";
+import { DEFAULT_CATEGORIES } from "./_lib/categories";
+import { db } from "./_lib/db";
+import { useLanguage } from "./_lib/i18n";
+import { currentMonthISO, formatCurrency } from "./_lib/utils";
 
 export default function DashboardPage() {
-  const { t } = useLanguage();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'expense' | 'income'>('expense');
+  const { t, language } = useLanguage();
+  const { user } = useAuth();
+  const router = useRouter();
 
   // ─── Live data ───────────────────────────────────────────────────────────────
 
   const month = currentMonthISO();
 
-  const allTransactions = useLiveQuery(() =>
-    db.transactions.orderBy('date').reverse().toArray(), []
-  ) ?? [];
+  const allTransactions =
+    useLiveQuery(
+      () => db.transactions.orderBy("date").reverse().toArray(),
+      [],
+    ) ?? [];
 
-  const monthTransactions = useLiveQuery(() =>
-    db.transactions.where('date').startsWith(month).toArray(), [month]
-  ) ?? [];
+  const monthTransactions =
+    useLiveQuery(
+      () => db.transactions.where("date").startsWith(month).toArray(),
+      [month],
+    ) ?? [];
 
-  const categories = useLiveQuery(() => db.categories.toArray(), [], DEFAULT_CATEGORIES) ?? DEFAULT_CATEGORIES;
+  const categories =
+    useLiveQuery(() => db.categories.toArray(), [], DEFAULT_CATEGORIES) ??
+    DEFAULT_CATEGORIES;
 
   const budgets = useLiveQuery(() => db.budgets.toArray(), []) ?? [];
 
   const settings = useLiveQuery(() => db.settings.toArray(), []) ?? [];
-  const currency = settings.find(s => s.key === 'currency')?.value ?? '$';
+  const currency = settings.find((s) => s.key === "currency")?.value ?? "$";
 
   // ─── Stats ────────────────────────────────────────────────────────────────────
 
   const totalIncome = monthTransactions
-    .filter(tx => tx.type === 'income')
+    .filter((tx) => tx.type === "income")
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const totalExpenses = monthTransactions
-    .filter(tx => tx.type === 'expense')
+    .filter((tx) => tx.type === "expense")
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const balance = totalIncome - totalExpenses;
 
-  const globalBudget = budgets.find(b => b.categoryId === null);
+  const globalBudget = budgets.find((b) => b.categoryId === null);
 
   // ─── Demo data ────────────────────────────────────────────────────────────────
 
   const loadDemo = useCallback(async () => {
-    const { seedSampleData } = await import('./_lib/sampleData');
+    const { seedSampleData } = await import("./_lib/sampleData");
     await seedSampleData();
-    toast.success('Sample data loaded!');
+    toast.success("Sample data loaded!");
   }, []);
 
   const clearDemo = useCallback(async () => {
-    const { clearAllData } = await import('./_lib/sampleData');
+    const { clearAllData } = await import("./_lib/sampleData");
     await clearAllData();
-    toast.success('Data cleared');
+    toast.success("Data cleared");
   }, []);
-
-  // ─── Open modal ────────────────────────────────────────────────────────────────
-
-  const openModal = (type: 'expense' | 'income') => {
-    seedCategories(); // ensure categories seeded
-    setModalType(type);
-    setModalOpen(true);
-  };
 
   const hasData = allTransactions.length > 0;
 
   return (
     <AppShell>
+      {hasData && (
+        <div className="mb-4 card py-4 sm:py-5">
+          <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+            {new Date().toLocaleDateString(
+              language === "fr" ? "fr-FR" : "en-US",
+              {
+                month: "long",
+                year: "numeric",
+              },
+            )}
+          </p>
+          <div className="flex items-end justify-between mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white">
+              {t.dashboard}
+            </h1>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={loadDemo}
+              id="try-demo-btn-top"
+            >
+              <Activity size={14} />
+              {t.tryDemo}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Welcome / empty state */}
       {!hasData && (
         <div
           className="card mb-6 text-center py-10 border border-gray-100 dark:border-gray-800/60"
-          style={{ background: 'var(--color-surface)' }}
+          style={{ background: "var(--color-surface)" }}
         >
           <div className="w-16 h-16 rounded-3xl mx-auto mb-5 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-            <Wallet size={28} strokeWidth={2} className="text-black dark:text-white" />
+            <Wallet
+              size={28}
+              strokeWidth={2}
+              className="text-black dark:text-white"
+            />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight mb-2 text-black dark:text-white">Welcome</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-[250px] mx-auto leading-relaxed">
+          <h2 className="text-2xl font-bold tracking-tight mb-2 text-black dark:text-white">
+            Welcome
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-64 mx-auto leading-relaxed">
             {t.tagline}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
             <button
               className="btn btn-primary px-6"
-              onClick={() => openModal('expense')}
+              onClick={() => router.push("/bulk")}
               id="start-tracking-btn"
             >
               {t.addExpense}
@@ -105,7 +148,7 @@ export default function DashboardPage() {
             <button
               className="btn btn-secondary px-6"
               onClick={loadDemo}
-              id="try-demo-btn"
+              id="try-demo-btn-empty"
             >
               <Activity size={16} />
               {t.tryDemo}
@@ -115,44 +158,75 @@ export default function DashboardPage() {
       )}
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {/* Income */}
         <div className="card stat-income">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium" style={{ color: 'oklch(0.55 0.18 145)' }}>{t.totalIncome}</span>
-            <TrendingUp size={16} style={{ color: 'oklch(0.55 0.18 145)' }} />
+            <span
+              className="text-xs font-medium"
+              style={{ color: "oklch(0.55 0.18 145)" }}
+            >
+              {t.totalIncome}
+            </span>
+            <TrendingUp size={16} style={{ color: "oklch(0.55 0.18 145)" }} />
           </div>
-          <p className="text-2xl font-bold" style={{ color: 'oklch(0.45 0.18 145)' }}>
+          <p
+            className="text-2xl font-bold"
+            style={{ color: "oklch(0.45 0.18 145)" }}
+          >
             {formatCurrency(totalIncome, currency)}
           </p>
-          <p className="text-xs mt-1" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.thisMonth}</p>
+          <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
+            {t.thisMonth}
+          </p>
         </div>
 
         {/* Expenses */}
         <div className="card stat-expense">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium" style={{ color: 'oklch(0.58 0.22 25)' }}>{t.totalExpenses}</span>
-            <TrendingDown size={16} style={{ color: 'oklch(0.58 0.22 25)' }} />
-          </div>
-          <p className="text-2xl font-bold" style={{ color: 'oklch(0.48 0.22 25)' }}>
-            {formatCurrency(totalExpenses, currency)}
-          </p>
-          <p className="text-xs mt-1" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.thisMonth}</p>
-        </div>
-
-        {/* Balance */}
-        <div className="card stat-balance">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium" style={{ color: 'oklch(0.52 0.24 265)' }}>{t.balance}</span>
-            <Wallet size={16} style={{ color: 'oklch(0.52 0.24 265)' }} />
+            <span
+              className="text-xs font-medium"
+              style={{ color: "oklch(0.58 0.22 25)" }}
+            >
+              {t.totalExpenses}
+            </span>
+            <TrendingDown size={16} style={{ color: "oklch(0.58 0.22 25)" }} />
           </div>
           <p
             className="text-2xl font-bold"
-            style={{ color: balance >= 0 ? 'oklch(0.45 0.18 145)' : 'oklch(0.48 0.22 25)' }}
+            style={{ color: "oklch(0.48 0.22 25)" }}
           >
-            {balance >= 0 ? '' : '-'}{formatCurrency(Math.abs(balance), currency)}
+            {formatCurrency(totalExpenses, currency)}
           </p>
-          <p className="text-xs mt-1" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.thisMonth}</p>
+          <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
+            {t.thisMonth}
+          </p>
+        </div>
+
+        {/* Balance */}
+        <div className="card stat-balance col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between mb-2">
+            <span
+              className="text-xs font-medium"
+              style={{ color: "oklch(0.52 0.24 265)" }}
+            >
+              {t.balance}
+            </span>
+            <Wallet size={16} style={{ color: "oklch(0.52 0.24 265)" }} />
+          </div>
+          <p
+            className="text-2xl font-bold"
+            style={{
+              color:
+                balance >= 0 ? "oklch(0.45 0.18 145)" : "oklch(0.48 0.22 25)",
+            }}
+          >
+            {balance >= 0 ? "" : "-"}
+            {formatCurrency(Math.abs(balance), currency)}
+          </p>
+          <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
+            {t.thisMonth}
+          </p>
         </div>
       </div>
 
@@ -174,7 +248,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Pie chart */}
           <div className="card">
-            <h2 className="font-semibold mb-3 text-sm">{t.expensesByCategory}</h2>
+            <h2 className="font-semibold mb-3 text-sm">
+              {t.expensesByCategory}
+            </h2>
             <ExpensePieChart
               transactions={monthTransactions}
               categories={categories}
@@ -190,7 +266,10 @@ export default function DashboardPage() {
           {/* Line chart */}
           <div className="card">
             <h2 className="font-semibold mb-3 text-sm">{t.spendingTrend}</h2>
-            <SpendingLineChart transactions={allTransactions} currency={currency} />
+            <SpendingLineChart
+              transactions={allTransactions}
+              currency={currency}
+            />
           </div>
         </div>
       )}
@@ -200,20 +279,12 @@ export default function DashboardPage() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-sm">{t.transactions}</h2>
-            <div className="flex items-center gap-3">
-              <Link 
-                href="/bulk"
-                className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-brand-600)] dark:text-[var(--color-brand-400)] hover:opacity-80 transition-opacity bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/20 px-2 py-1 rounded"
-              >
-                + Bulk Add
-              </Link>
-              <Link
-                href="/transactions"
-                className="text-xs font-medium text-black dark:text-white underline decoration-1 underline-offset-2 hover:opacity-70 transition-opacity"
-              >
-                View all →
-              </Link>
-            </div>
+            <Link
+              href="/transactions"
+              className="text-xs font-medium text-black dark:text-white underline decoration-1 underline-offset-2 hover:opacity-70 transition-opacity"
+            >
+              View all →
+            </Link>
           </div>
           <TransactionList
             transactions={allTransactions}
@@ -230,7 +301,7 @@ export default function DashboardPage() {
         <div className="mt-4 flex justify-end">
           <button
             className="btn btn-ghost btn-sm text-xs flex items-center gap-1"
-            style={{ color: 'oklch(0.60 0.01 265)' }}
+            style={{ color: "oklch(0.60 0.01 265)" }}
             onClick={clearDemo}
             id="clear-data-btn"
           >
@@ -240,19 +311,34 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* FAB */}
-      <FAB
-        onAddExpense={() => openModal('expense')}
-        onAddIncome={() => openModal('income')}
-      />
+      {/* Premium Upsell Banner – visible when not signed in */}
+      {!user && hasData && (
+        <Link
+          href="/premium"
+          className="card mt-6 flex items-center gap-4 p-4 bg-amber-50/80 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-800/30 group cursor-pointer hover:shadow-md transition-shadow"
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <Star size={20} className="text-amber-600 fill-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-black dark:text-white">
+              {language === "fr"
+                ? "Passez à QuickExpense Pro"
+                : "Upgrade to QuickExpense Pro"}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {language === "fr"
+                ? "Cloud sync, exports CSV, catégories illimitées"
+                : "Cloud sync, CSV exports, unlimited categories"}
+            </p>
+          </div>
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-500 shrink-0 group-hover:translate-x-0.5 transition-transform">
+            →
+          </span>
+        </Link>
+      )}
 
-      {/* Add modal */}
-      <AddTransactionModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        defaultType={modalType}
-        defaultCurrency={currency}
-      />
+      <FAB />
     </AppShell>
   );
 }

@@ -1,14 +1,15 @@
 'use client';
 
-// CSV and JSON export/import + Family Sharing
-import { useState, useRef } from 'react';
-import { Download, Upload, Copy, Share2, CheckCircle } from 'lucide-react';
+// CSV and JSON export – Premium-gated with upsell
+import { useState } from 'react';
+import { Download, Copy, CheckCircle, Lock, Star } from 'lucide-react';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
-import { db, type Transaction } from '../_lib/db';
+import { type Transaction } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
+import { useAuth } from '../_lib/auth';
 import { DEFAULT_CATEGORIES } from '../_lib/categories';
-import { toBase64, fromBase64 } from '../_lib/utils';
+import Link from 'next/link';
 
 interface ExportImportProps {
   transactions: Transaction[];
@@ -17,14 +18,14 @@ interface ExportImportProps {
 
 export function ExportImport({ transactions, currency }: ExportImportProps) {
   const { t, language } = useLanguage();
-  const [importing, setImporting] = useState(false);
-  const [pasteText, setPasteText] = useState('');
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const isPro = user?.isPro === true;
 
   // ─── Export CSV ─────────────────────────────────────────────
 
   const exportCSV = () => {
+    if (!isPro) return;
     const data = transactions.map(tx => {
       const cat = DEFAULT_CATEGORIES.find(c => c.id === tx.categoryId);
       return {
@@ -46,6 +47,7 @@ export function ExportImport({ transactions, currency }: ExportImportProps) {
   // ─── Export JSON ─────────────────────────────────────────────
 
   const exportJSON = () => {
+    if (!isPro) return;
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -60,8 +62,9 @@ export function ExportImport({ transactions, currency }: ExportImportProps) {
   // ─── Copy Base64 for sharing ──────────────────────────────────
 
   const copyBase64 = async () => {
+    if (!isPro) return;
     const payload = { version: 1, exportedAt: new Date().toISOString(), transactions };
-    const b64 = toBase64(payload);
+    const b64 = btoa(JSON.stringify(payload));
     try {
       await navigator.clipboard.writeText(b64);
       setCopied(true);
@@ -72,133 +75,71 @@ export function ExportImport({ transactions, currency }: ExportImportProps) {
     }
   };
 
-  // ─── Import JSON ──────────────────────────────────────────────
-
-  const handleImport = async (jsonStr: string) => {
-    setImporting(true);
-    try {
-      let parsed: unknown;
-
-      // Try direct JSON parse first, then base64
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch {
-        parsed = fromBase64(jsonStr);
-      }
-
-      if (!parsed || typeof parsed !== 'object') {
-        throw new Error('Invalid format');
-      }
-
-      const data = parsed as { transactions?: Transaction[] };
-      const txs = data.transactions;
-
-      if (!Array.isArray(txs) || txs.length === 0) {
-        throw new Error('No transactions found');
-      }
-
-      // Strip IDs and import
-      const cleaned = txs.map(({ id: _, ...rest }) => ({
-        ...rest,
-        currency: rest.currency || currency,
-        createdAt: rest.createdAt || Date.now(),
-      }));
-
-      await db.transactions.bulkAdd(cleaned as Transaction[]);
-      toast.success(`${t.importSuccess} (${cleaned.length} transactions)`);
-      setPasteText('');
-    } catch (err) {
-      toast.error(t.importError);
-      console.error(err);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => handleImport(ev.target?.result as string);
-    reader.readAsText(file);
-    e.target.value = '';
-  };
+  if (!isPro) {
+    return (
+      <div className="card relative overflow-hidden">
+        <div className="flex items-center gap-2 mb-3">
+          <Lock size={16} className="text-gray-400" />
+          <h3 className="font-semibold text-sm text-gray-500">{t.exportCSV} / {t.exportJSON}</h3>
+          <span className="ml-auto text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-500 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <Star size={10} className="fill-current" /> PRO
+          </span>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          {language === 'fr' 
+            ? "Exportez vos données en CSV ou JSON. Disponible avec QuickExpense Pro." 
+            : "Export your transaction data as CSV or JSON backups. Available with QuickExpense Pro."}
+        </p>
+        <div className="flex flex-wrap gap-2 mb-4 opacity-40 pointer-events-none select-none">
+          <button className="btn btn-secondary flex gap-1.5 items-center">
+            <Download size={15} /> {t.exportCSV}
+          </button>
+          <button className="btn btn-secondary flex gap-1.5 items-center">
+            <Download size={15} /> {t.exportJSON}
+          </button>
+          <button className="btn btn-secondary flex gap-1.5 items-center">
+            <Copy size={15} /> {t.copyBase64}
+          </button>
+        </div>
+        <Link 
+          href="/premium" 
+          className="inline-flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Star size={14} className="fill-current" />
+          {language === 'fr' ? "Passer à Pro" : "Upgrade to Pro"}
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Export section */}
-      <div className="card">
-        <h3 className="font-semibold mb-3 text-sm">Export</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="btn btn-secondary flex gap-1.5 items-center"
-            onClick={exportCSV}
-            id="export-csv-btn"
-          >
-            <Download size={15} />
-            {t.exportCSV}
-          </button>
-          <button
-            className="btn btn-secondary flex gap-1.5 items-center"
-            onClick={exportJSON}
-            id="export-json-btn"
-          >
-            <Download size={15} />
-            {t.exportJSON}
-          </button>
-          <button
-            className="btn btn-secondary flex gap-1.5 items-center"
-            onClick={copyBase64}
-            id="copy-base64-btn"
-          >
-            {copied ? <CheckCircle size={15} style={{ color: 'oklch(0.55 0.18 145)' }} /> : <Copy size={15} />}
-            {t.copyBase64}
-          </button>
-        </div>
-      </div>
-
-      {/* Import section */}
-      <div className="card">
-        <h3 className="font-semibold mb-3 text-sm">Import / {t.familyMode}</h3>
-        <p className="text-xs mb-3" style={{ color: 'oklch(0.60 0.01 265)' }}>
-          {t.familyDescription}
-        </p>
-        <div className="flex flex-col gap-2">
-          <textarea
-            className="input"
-            style={{ minHeight: '80px', resize: 'vertical' }}
-            placeholder={t.pasteOrUpload}
-            value={pasteText}
-            onChange={e => setPasteText(e.target.value)}
-            id="import-paste-area"
-          />
-          <div className="flex gap-2">
-            <button
-              className="btn btn-primary flex gap-1.5 items-center"
-              onClick={() => pasteText && handleImport(pasteText)}
-              disabled={!pasteText || importing}
-              id="import-paste-btn"
-            >
-              <Upload size={15} />
-              {importing ? t.loading : t.importData}
-            </button>
-            <button
-              className="btn btn-secondary flex gap-1.5 items-center"
-              onClick={() => fileRef.current?.click()}
-              id="import-file-btn"
-            >
-              <Share2 size={15} />
-              {t.downloadJSON}
-            </button>
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".json,.txt"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-        </div>
+    <div className="card">
+      <h3 className="font-semibold mb-3 text-sm">{language === 'fr' ? 'Exporter les données' : 'Export Data'}</h3>
+      <div className="flex flex-wrap gap-2">
+        <button
+          className="btn btn-secondary flex gap-1.5 items-center"
+          onClick={exportCSV}
+          id="export-csv-btn"
+        >
+          <Download size={15} />
+          {t.exportCSV}
+        </button>
+        <button
+          className="btn btn-secondary flex gap-1.5 items-center"
+          onClick={exportJSON}
+          id="export-json-btn"
+        >
+          <Download size={15} />
+          {t.exportJSON}
+        </button>
+        <button
+          className="btn btn-secondary flex gap-1.5 items-center"
+          onClick={copyBase64}
+          id="copy-base64-btn"
+        >
+          {copied ? <CheckCircle size={15} className="text-green-500" /> : <Copy size={15} />}
+          {t.copyBase64}
+        </button>
       </div>
     </div>
   );
