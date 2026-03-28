@@ -3,14 +3,14 @@
 // Registers the PWA service worker on mount
 import { useEffect } from 'react';
 
-type BeforeInstallPromptEvent = Event & {
+type QEInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
 declare global {
   interface Window {
-    __qeDeferredInstallPrompt?: BeforeInstallPromptEvent | null;
+    __qeDeferredInstallPrompt?: QEInstallPromptEvent | null;
   }
 }
 
@@ -22,7 +22,7 @@ export function PWARegister() {
 
     const onBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      window.__qeDeferredInstallPrompt = e as BeforeInstallPromptEvent;
+      window.__qeDeferredInstallPrompt = e as QEInstallPromptEvent;
       window.dispatchEvent(new CustomEvent('qe:installprompt-available'));
     };
 

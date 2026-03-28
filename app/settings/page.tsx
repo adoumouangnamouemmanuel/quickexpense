@@ -18,14 +18,14 @@ import { db } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
 import { CURRENCY_OPTIONS, currentMonthISO } from "../_lib/utils";
 
-type BeforeInstallPromptEvent = Event & {
+type QEInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
 declare global {
   interface Window {
-    __qeDeferredInstallPrompt?: BeforeInstallPromptEvent | null;
+    __qeDeferredInstallPrompt?: QEInstallPromptEvent | null;
   }
 }
 
@@ -55,7 +55,7 @@ export default function SettingsPage() {
   >({});
   const [newCatName, setNewCatName] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
-  const [deferredInstall, setDeferredInstall] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredInstall, setDeferredInstall] = useState<QEInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
   // Populate from DB
@@ -564,8 +564,3 @@ export default function SettingsPage() {
   );
 }
 
-// PWA type helper
-interface BeforeInstallPromptEvent extends Event {
-  prompt?: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
