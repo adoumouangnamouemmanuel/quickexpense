@@ -3,6 +3,7 @@
 // Transactions page – full list with filters
 import { useLiveQuery } from "dexie-react-hooks";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { AppShell } from "../_components/AppShell";
 import { FAB } from "../_components/FAB";
 import { TransactionList } from "../_components/TransactionList";
@@ -11,6 +12,14 @@ import { db } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
 
 export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<TransactionsLoadingShell />}>
+      <TransactionsPageContent />
+    </Suspense>
+  );
+}
+
+function TransactionsPageContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
   const initialCategoryFilter =
@@ -50,6 +59,23 @@ export default function TransactionsPage() {
         />
       </div>
 
+      <FAB />
+    </AppShell>
+  );
+}
+
+function TransactionsLoadingShell() {
+  return (
+    <AppShell>
+      <div className="mb-4 card py-4 sm:py-5">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+          Activity
+        </p>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mt-1">
+          Transactions
+        </h1>
+      </div>
+      <div className="card p-6 text-sm text-gray-500 dark:text-gray-400">Loading...</div>
       <FAB />
     </AppShell>
   );
