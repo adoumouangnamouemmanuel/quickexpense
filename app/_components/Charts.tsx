@@ -60,7 +60,7 @@ export function ExpensePieChart({ transactions, categories, currency }: ExpenseP
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={220} className="chart-shell">
       <PieChart>
         <Pie
           data={data}
@@ -77,6 +77,7 @@ export function ExpensePieChart({ transactions, categories, currency }: ExpenseP
           ))}
         </Pie>
         <Tooltip
+          cursor={false}
           formatter={(value) => [formatCurrency(Number(value ?? 0), currency), '']}
           contentStyle={{
             borderRadius: '0.75rem',
@@ -202,7 +203,7 @@ export function SpendingLineChart({ transactions, currency, days = 30, startDate
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={220} className="chart-shell">
       <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.82 0.01 265 / 0.3)" />
         <XAxis
@@ -219,6 +220,7 @@ export function SpendingLineChart({ transactions, currency, days = 30, startDate
           tickFormatter={(v) => `${currency}${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
         />
         <Tooltip
+          cursor={false}
           formatter={(value, name) => [
             formatCurrency(Number(value ?? 0), currency),
             name === 'expenses' ? t.expense : t.income,

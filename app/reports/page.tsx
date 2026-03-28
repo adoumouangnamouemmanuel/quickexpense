@@ -241,6 +241,7 @@ export default function ReportsPage() {
                 }
               />
               <Tooltip
+                cursor={false}
                 formatter={(value, name) => [
                   formatCurrency(Number(value ?? 0), currency),
                   name === "income" ? t.income : t.expense,

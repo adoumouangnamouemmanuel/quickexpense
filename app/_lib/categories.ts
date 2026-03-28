@@ -93,7 +93,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'money-lent',
     nameEn: 'Money Lent',
-    nameFr: 'Argent prete',
+    nameFr: 'Mes bons',
     icon: 'HandCoins',
     color: '#0ea5a4',
     isCustom: false,
@@ -101,7 +101,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'debt-repaid',
     nameEn: 'Debt Repaid',
-    nameFr: 'Mes bons',
+    nameFr: 'Dettes',
     icon: 'CircleDollarSign',
     color: '#14b8a6',
     isCustom: false,
@@ -167,8 +167,8 @@ export async function seedCategories(): Promise<void> {
       if (cat.id === 'money-lent' && cat.nameFr !== 'Mes bons') {
         updated = { ...(updated ?? cat), nameFr: 'Mes bons' };
       }
-      if (cat.id === 'debt-repaid' && cat.nameFr !== 'Mes bons') {
-        updated = { ...(updated ?? cat), nameFr: 'Mes bons' };
+      if (cat.id === 'debt-repaid' && cat.nameFr !== 'Dettes') {
+        updated = { ...(updated ?? cat), nameFr: 'Dettes' };
       }
 
       if (updated) {

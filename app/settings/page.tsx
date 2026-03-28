@@ -18,6 +18,17 @@ import { db } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
 import { CURRENCY_OPTIONS, currentMonthISO } from "../_lib/utils";
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
+
+declare global {
+  interface Window {
+    __qeDeferredInstallPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
 export default function SettingsPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
@@ -44,7 +55,7 @@ export default function SettingsPage() {
   >({});
   const [newCatName, setNewCatName] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
-  const [deferredInstall, setDeferredInstall] = useState<Event | null>(null);
+  const [deferredInstall, setDeferredInstall] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
   // Populate from DB
@@ -69,12 +80,14 @@ export default function SettingsPage() {
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     setIsStandalone(Boolean(standaloneMode));
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredInstall(e);
+    setDeferredInstall(window.__qeDeferredInstallPrompt ?? null);
+
+    const handler = () => {
+      setDeferredInstall(window.__qeDeferredInstallPrompt ?? null);
     };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+
+    window.addEventListener("qe:installprompt-available", handler as EventListener);
+    return () => window.removeEventListener("qe:installprompt-available", handler as EventListener);
   }, []);
 
   // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -163,10 +176,12 @@ export default function SettingsPage() {
 
   const installPWA = async () => {
     if (!deferredInstall) return;
-    const prompt = deferredInstall as BeforeInstallPromptEvent;
-    prompt.prompt?.();
-    const result = await prompt.userChoice;
-    if (result.outcome === "accepted") setDeferredInstall(null);
+    await deferredInstall.prompt?.();
+    const result = await deferredInstall.userChoice;
+    if (result.outcome === "accepted") {
+      setDeferredInstall(null);
+      window.__qeDeferredInstallPrompt = null;
+    }
   };
 
   const triggerInstall = async () => {
@@ -448,7 +463,7 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             {language === "fr"
-              ? "Utilisez la categorie 'Mes bons' dans vos transactions."
+              ? "Utilisez les categories 'Mes bons' et 'Dettes' dans vos transactions."
               : "Use the 'Money Lent' and 'Debt Repaid' categories in transactions."}
           </p>
           <Link href="/bulk" className="btn btn-secondary btn-sm w-fit">

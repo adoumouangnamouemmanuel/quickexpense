@@ -3,11 +3,30 @@
 // Registers the PWA service worker on mount
 import { useEffect } from 'react';
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
+
+declare global {
+  interface Window {
+    __qeDeferredInstallPrompt?: BeforeInstallPromptEvent | null;
+  }
+}
+
 export function PWARegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) {
       return;
     }
+
+    const onBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      window.__qeDeferredInstallPrompt = e as BeforeInstallPromptEvent;
+      window.dispatchEvent(new CustomEvent('qe:installprompt-available'));
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
 
     // In dev, unregister stale workers to prevent chunk/version skew issues.
     if (process.env.NODE_ENV !== 'production') {
@@ -23,7 +42,9 @@ export function PWARegister() {
         .catch((err) => {
           console.warn('[SW] Dev cleanup failed:', err);
         });
-      return;
+      return () => {
+        window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      };
     }
 
     navigator.serviceWorker
@@ -34,6 +55,10 @@ export function PWARegister() {
       .catch((err) => {
         console.error('[SW] Registration failed:', err);
       });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    };
   }, []);
 
   return null;

@@ -294,6 +294,19 @@ body {
   transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ─── Charts interaction polish ───────────────────────────────────────────── */
+.chart-shell,
+.chart-shell * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chart-shell svg:focus,
+.chart-shell .recharts-sector:focus,
+.chart-shell .recharts-rectangle:focus,
+.chart-shell .recharts-dot:focus {
+  outline: none;
+}
+
 /* ─── Glassmorphism Utilities ────────────────────────────────────────────────── */
 .glass {
   background: var(--color-surface-glass);

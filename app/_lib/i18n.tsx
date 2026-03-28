@@ -233,10 +233,10 @@ const dictionaries = {
     installApp: "Installer l'application",
     installHint:
       "Ajoutez QuickExpense à votre écran d'accueil pour la meilleure expérience.",
-    debtTracking: "Mes bons",
+    debtTracking: "Mes bons / Dettes",
     debtOutstanding: "Mes bons",
-    moneyLent: "Argent prêté",
-    debtRepaid: "Mes bons",
+    moneyLent: "Mes bons",
+    debtRepaid: "Dettes",
     personName: "Nom de la personne qui a emprunté",
     enterPersonName: "Nom de la personne qui a emprunté",
     personNameRequired: "Veuillez saisir le nom de la personne pour mes bons.",
