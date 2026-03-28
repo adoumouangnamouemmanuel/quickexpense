@@ -100,12 +100,49 @@ export const DEFAULT_CATEGORIES: Category[] = [
   },
 ];
 
-/** Seed default categories into the DB if not present */
+/** Seed default categories into the DB if not present, and migrate old emojis */
 export async function seedCategories(): Promise<void> {
   // Import here to avoid circular issues at module level
   const { db } = await import('./db');
+  
   const count = await db.categories.count();
   if (count === 0) {
     await db.categories.bulkPut(DEFAULT_CATEGORIES);
+  } else {
+    // Migration: Update any existing categories that still use old emojis instead of Lucide strings
+    const existing = await db.categories.toArray();
+    const toUpdate: Category[] = [];
+    
+    // Map between old emojis and new Lucide strings
+    const emojiMap: Record<string, string> = {
+      '🍽️': 'Utensils',
+      '🚌': 'Car',
+      '🏠': 'Home',
+      '💡': 'Lightbulb',
+      '🛒': 'ShoppingCart',
+      '🎬': 'Music',
+      '🏥': 'HeartPulse',
+      '🛍️': 'Shirt',
+      '✈️': 'Plane',
+      '📚': 'GraduationCap',
+      '💼': 'Wallet',
+      '📦': 'HelpCircle',
+      '🏷️': 'Tag', // Custom category default icon
+    };
+
+    for (const cat of existing) {
+      if (emojiMap[cat.icon]) {
+        toUpdate.push({ ...cat, icon: emojiMap[cat.icon] });
+      }
+      // Handle the case where the user had a custom string but it's not a valid Lucide icon name
+      // This is trickier, but anything containing a non-ASCII char is likely an emoji
+      else if (/[\u1000-\uFFFF]/.test(cat.icon)) {
+        toUpdate.push({ ...cat, icon: 'HelpCircle' }); 
+      }
+    }
+
+    if (toUpdate.length > 0) {
+      await db.categories.bulkPut(toUpdate);
+    }
   }
 }

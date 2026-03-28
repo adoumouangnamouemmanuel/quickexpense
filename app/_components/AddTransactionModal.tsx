@@ -6,7 +6,7 @@ import { X, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { db, type Transaction, type TransactionType } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
-import { todayISO } from '../_lib/utils';
+import { todayISO, CURRENCY_OPTIONS } from '../_lib/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { DEFAULT_CATEGORIES } from '../_lib/categories';
 import { IconRenderer } from './IconRenderer';
@@ -58,7 +58,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
     }
   }, [editTx, defaultType, defaultCurrency, open]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (addAnother = false) => {
     const amt = parseFloat(amount);
     if (!amount || isNaN(amt) || amt <= 0) {
       toast.error('Please enter a valid amount');
@@ -81,11 +81,20 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
       if (editTx?.id !== undefined) {
         await db.transactions.update(editTx.id, tx);
         toast.success('Transaction updated!');
+        onClose();
       } else {
         await db.transactions.add(tx as Transaction);
         toast.success('Transaction saved!');
+        if (addAnother) {
+          // Reset fields for another entry
+          setAmount('');
+          setNote('');
+          setTags('');
+          // Keep type, cat, date, currency as they might be doing batch entries
+        } else {
+          onClose();
+        }
       }
-      onClose();
     } catch (err) {
       toast.error('Failed to save transaction');
       console.error(err);
@@ -167,8 +176,8 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
               onChange={(e) => setCurrency(e.target.value)}
               id="tx-currency-select"
             >
-              {['$', '€', '£', '¥', 'CFA', '₦', 'C$', 'CHF'].map(sym => (
-                <option key={sym} value={sym}>{sym}</option>
+              {CURRENCY_OPTIONS.map(opt => (
+                <option key={opt.symbol} value={opt.symbol}>{opt.symbol}</option>
               ))}
             </select>
           </div>
@@ -238,11 +247,22 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 justify-end">
-          <button className="btn btn-secondary" onClick={onClose} id="tx-cancel-btn">{t.cancel}</button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:justify-end mt-6">
+          <button className="btn btn-secondary w-full sm:w-auto" onClick={onClose} id="tx-cancel-btn">{t.cancel}</button>
+          
+          {!editTx && (
+            <button
+              className="btn w-full sm:w-auto bg-[var(--color-surface-2)] border border-[var(--color-surface-3)] hover:bg-[var(--color-surface-3)] font-medium transition-colors cursor-pointer"
+              onClick={() => handleSave(true)}
+              disabled={saving}
+            >
+              {saving ? '…' : 'Save & Add Another'}
+            </button>
+          )}
+
           <button
-            className="btn btn-primary"
-            onClick={handleSave}
+            className="btn btn-primary w-full sm:w-auto"
+            onClick={() => handleSave(false)}
             disabled={saving}
             id="tx-save-btn"
           >

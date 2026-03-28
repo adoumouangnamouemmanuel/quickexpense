@@ -2,13 +2,20 @@
 
 // App shell: sidebar + main content area
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
+import { seedCategories } from '../_lib/categories';
 import type { ReactNode } from 'react';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+
+  // Background migration
+  useEffect(() => {
+    seedCategories().catch(console.error);
+  }, []);
 
   if (isAuthPage) {
     return <main className="min-h-screen bg-[var(--color-surface)]">{children}</main>;

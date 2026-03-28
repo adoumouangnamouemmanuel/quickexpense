@@ -93,62 +93,86 @@ export function TransactionList({
     <div>
       {/* Filters */}
       {showFilters && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {/* Search */}
-          <div className="flex items-center gap-2 input flex-1 min-w-48" style={{ padding: '0.5rem 0.875rem' }}>
-            <Search size={15} style={{ color: 'oklch(0.60 0.01 265)', flexShrink: 0 }} />
+        <div className="flex flex-col gap-3 mb-6">
+          {/* Search Bar */}
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl relative">
+            <Search size={16} className="text-gray-400 shrink-0" />
             <input
               type="text"
               placeholder={t.search}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', flex: 1, fontSize: '0.9rem', color: 'inherit' }}
+              className="bg-transparent border-none outline-none flex-1 text-sm text-black dark:text-white placeholder:text-gray-400"
               id="tx-search-input"
             />
           </div>
 
-          {/* Type */}
-          <select
-            className="input select"
-            style={{ width: 'auto' }}
-            value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value as typeof typeFilter)}
-            id="tx-type-filter"
-          >
-            <option value="all">{t.all}</option>
-            <option value="expense">{t.expense}</option>
-            <option value="income">{t.income}</option>
-          </select>
+          {/* Swipeable Filter Pills */}
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-2 px-2 sm:mx-0 sm:px-0 scroll-smooth" style={{ WebkitOverflowScrolling: 'touch' }}>
+            
+            {/* Type Filter */}
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 dark:bg-gray-800/80 rounded-lg shrink-0">
+              <button 
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${typeFilter === 'all' ? 'bg-white dark:bg-black shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'}`}
+                onClick={() => setTypeFilter('all')}
+              >
+                {t.all}
+              </button>
+              <button 
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${typeFilter === 'expense' ? 'bg-white dark:bg-black shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'}`}
+                onClick={() => setTypeFilter('expense')}
+              >
+                {t.expense}
+              </button>
+              <button 
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${typeFilter === 'income' ? 'bg-white dark:bg-black shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'}`}
+                onClick={() => setTypeFilter('income')}
+              >
+                {t.income}
+              </button>
+            </div>
 
-          {/* Category */}
-          <select
-            className="input select"
-            style={{ width: 'auto' }}
-            value={catFilter}
-            onChange={e => setCatFilter(e.target.value)}
-            id="tx-cat-filter"
-          >
-            <option value="all">{t.all}</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>
-                {language === 'fr' ? cat.nameFr : cat.nameEn}
-              </option>
-            ))}
-          </select>
+            {/* Sort Select Styled as Pill */}
+            <div className="relative shrink-0 flex items-center bg-gray-100/80 dark:bg-gray-800/80 rounded-lg px-3 py-1">
+              <span className="text-xs font-medium text-gray-500 mr-1 shrink-0">{t.sortBy}:</span>
+              <select
+                className="bg-transparent text-xs font-medium text-black dark:text-white outline-none cursor-pointer appearance-none pr-4"
+                value={sort}
+                onChange={e => setSort(e.target.value as SortKey)}
+                id="tx-sort-select"
+              >
+                <option value="date-desc">{t.newest}</option>
+                <option value="date-asc">{t.oldest}</option>
+                <option value="amount-desc">{t.highest}</option>
+                <option value="amount-asc">{t.lowest}</option>
+              </select>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown size={12} className="text-gray-400" />
+              </div>
+            </div>
 
-          {/* Sort */}
-          <select
-            className="input select"
-            style={{ width: 'auto' }}
-            value={sort}
-            onChange={e => setSort(e.target.value as SortKey)}
-            id="tx-sort-select"
-          >
-            <option value="date-desc">{t.newest}</option>
-            <option value="date-asc">{t.oldest}</option>
-            <option value="amount-desc">{t.highest}</option>
-            <option value="amount-asc">{t.lowest}</option>
-          </select>
+            {/* Category Filter */}
+            <div className="relative shrink-0 flex items-center bg-gray-100/80 dark:bg-gray-800/80 rounded-lg px-3 py-1">
+              <span className="text-xs font-medium text-gray-500 mr-1 shrink-0">{t.category}:</span>
+              <select
+                className="bg-transparent text-xs font-medium text-black dark:text-white outline-none cursor-pointer appearance-none pr-4"
+                value={catFilter}
+                onChange={e => setCatFilter(e.target.value)}
+                id="tx-cat-filter"
+              >
+                <option value="all">{t.all}</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {language === 'fr' ? cat.nameFr : cat.nameEn}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronDown size={12} className="text-gray-400" />
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
 

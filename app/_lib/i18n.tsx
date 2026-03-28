@@ -59,6 +59,12 @@ const dictionaries = {
     confirmDelete: 'Delete this transaction?',
     confirmDeleteAll: 'Delete ALL data? This cannot be undone.',
 
+    // Auth
+    login: 'Log In',
+    signup: 'Sign Up',
+    logout: 'Log Out',
+    signInCloud: 'Sign In for Cloud Sync',
+
     // Filters
     search: 'Search…',
     filterByDate: 'Filter by Date',
@@ -168,6 +174,12 @@ const dictionaries = {
     confirm: 'Confirmer',
     confirmDelete: 'Supprimer cette transaction ?',
     confirmDeleteAll: 'Supprimer TOUTES les données ? Cette action est irréversible.',
+
+    // Auth
+    login: 'Se connecter',
+    signup: "S'inscrire",
+    logout: 'Déconnexion',
+    signInCloud: 'Connexion pour la synchronisation Cloud',
 
     // Filters
     search: 'Rechercher…',

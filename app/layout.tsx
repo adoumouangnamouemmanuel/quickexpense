@@ -48,7 +48,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-screen">
+      <body suppressHydrationWarning className="min-h-screen">
         <Providers>{children}</Providers>
       </body>
     </html>
