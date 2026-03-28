@@ -43,6 +43,7 @@ const dictionaries = {
     category: "Category",
     date: "Date",
     note: "Note / Description",
+    expenseTitle: "Expense Title",
     tags: "Tags",
     currency: "Currency",
     save: "Save",
@@ -118,6 +119,9 @@ const dictionaries = {
     bulkHint: "Any empty rows will be skipped automatically.",
     addAnotherEntry: "Add Another Entry",
     thisMonth: "This Month",
+    thisWeek: "This Week",
+    thisYear: "This Year",
+    allTime: "All Time",
     noTransactions: "No transactions found.",
     loading: "Loading…",
     optional: "optional",
@@ -125,6 +129,7 @@ const dictionaries = {
     selectType: "Select type",
     enterAmount: "Enter amount",
     enterNote: "Add a note…",
+    enterExpenseTitle: "Add an optional title…",
     enterTags: "Add tags (comma separated)…",
 
     // Family sharing
@@ -173,6 +178,7 @@ const dictionaries = {
     category: "Catégorie",
     date: "Date",
     note: "Note / Description",
+    expenseTitle: "Titre de dépense",
     tags: "Tags",
     currency: "Devise",
     save: "Enregistrer",
@@ -249,6 +255,9 @@ const dictionaries = {
     bulkHint: "Les lignes vides seront ignorées automatiquement.",
     addAnotherEntry: "Ajouter une entrée",
     thisMonth: "Ce mois-ci",
+    thisWeek: "Cette semaine",
+    thisYear: "Cette année",
+    allTime: "Tout",
     noTransactions: "Aucune transaction trouvée.",
     loading: "Chargement…",
     optional: "optionnel",
@@ -256,6 +265,7 @@ const dictionaries = {
     selectType: "Sélectionner un type",
     enterAmount: "Entrer le montant",
     enterNote: "Ajouter une note…",
+    enterExpenseTitle: "Ajouter un titre (optionnel)…",
     enterTags: "Ajouter des tags (séparés par virgule)…",
 
     // Family sharing

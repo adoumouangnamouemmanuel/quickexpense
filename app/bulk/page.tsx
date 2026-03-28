@@ -212,7 +212,7 @@ export default function QuickAddPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="relative">
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <span className="text-gray-400 font-bold">$</span>
+                      <span className="text-gray-400 font-bold">{defaultCurrency}</span>
                     </div>
                     <input
                       type="number"
@@ -250,7 +250,7 @@ export default function QuickAddPage() {
                   placeholder={
                     isDebtCategory
                       ? (language === 'fr' ? 'Commentaire (optionnel)' : 'Context (optional)')
-                      : (t.enterNote || 'Note (optional)')
+                      : (t.enterExpenseTitle || t.enterNote || 'Note (optional)')
                   }
                   value={row.note}
                   onChange={e => updateRow(row.id, 'note', e.target.value)}

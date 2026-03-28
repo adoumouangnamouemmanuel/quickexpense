@@ -6,14 +6,13 @@ import {
   Activity,
   HandCoins,
   Star,
-  Trash2,
   TrendingDown,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "./_components/AppShell";
 import { BudgetProgress } from "./_components/BudgetProgress";
@@ -34,6 +33,7 @@ export default function DashboardPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
+  const [periodScope, setPeriodScope] = useState<"week" | "month" | "year" | "all">("month");
 
   // ─── Live data ───────────────────────────────────────────────────────────────
 
@@ -62,11 +62,33 @@ export default function DashboardPage() {
 
   // ─── Stats ────────────────────────────────────────────────────────────────────
 
-  const totalIncome = monthTransactions
+  const scopedTransactions = useMemo(() => {
+    if (periodScope === "all") return allTransactions;
+
+    const now = new Date();
+    if (periodScope === "year") {
+      const yearPrefix = String(now.getFullYear());
+      return allTransactions.filter((tx) => tx.date.startsWith(yearPrefix));
+    }
+
+    if (periodScope === "month") {
+      const monthPrefix = currentMonthISO();
+      return allTransactions.filter((tx) => tx.date.startsWith(monthPrefix));
+    }
+
+    const monday = new Date(now);
+    const day = monday.getDay() || 7;
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - day + 1);
+    const mondayISO = monday.toISOString().slice(0, 10);
+    return allTransactions.filter((tx) => tx.date >= mondayISO);
+  }, [allTransactions, periodScope]);
+
+  const totalIncome = scopedTransactions
     .filter((tx) => tx.type === "income")
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const totalExpenses = monthTransactions
+  const totalExpenses = scopedTransactions
     .filter((tx) => tx.type === "expense")
     .reduce((sum, tx) => sum + tx.amount, 0);
 
@@ -91,13 +113,16 @@ export default function DashboardPage() {
     toast.success("Sample data loaded!");
   }, []);
 
-  const clearDemo = useCallback(async () => {
-    const { clearAllData } = await import("./_lib/sampleData");
-    await clearAllData();
-    toast.success("Data cleared");
-  }, []);
-
   const hasData = allTransactions.length > 0;
+
+  const periodLabel =
+    periodScope === "week"
+      ? t.thisWeek
+      : periodScope === "month"
+        ? t.thisMonth
+        : periodScope === "year"
+          ? t.thisYear
+          : t.allTime;
 
   return (
     <AppShell>
@@ -158,6 +183,30 @@ export default function DashboardPage() {
       )}
 
       {/* Stats cards */}
+      <div className="mb-3 overflow-x-auto hide-scrollbar">
+        <div className="inline-flex rounded-xl p-1 bg-surface-2 border border-surface-3 min-w-max">
+          {([
+            { id: "week", label: t.thisWeek },
+            { id: "month", label: t.thisMonth },
+            { id: "year", label: t.thisYear },
+            { id: "all", label: t.allTime },
+          ] as const).map((opt) => (
+            <button
+              key={opt.id}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors font-semibold ${
+                periodScope === opt.id
+                  ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
+                  : "text-gray-500 hover:text-black dark:hover:text-white"
+              }`}
+              onClick={() => setPeriodScope(opt.id)}
+              id={`dashboard-scope-${opt.id}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {/* Income */}
         <div className="card stat-income">
@@ -177,7 +226,7 @@ export default function DashboardPage() {
             {formatCurrency(totalIncome, currency)}
           </p>
           <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
-            {t.thisMonth}
+            {periodLabel}
           </p>
         </div>
 
@@ -199,7 +248,7 @@ export default function DashboardPage() {
             {formatCurrency(totalExpenses, currency)}
           </p>
           <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
-            {t.thisMonth}
+            {periodLabel}
           </p>
         </div>
 
@@ -225,7 +274,7 @@ export default function DashboardPage() {
             {formatCurrency(Math.abs(balance), currency)}
           </p>
           <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
-            {t.thisMonth}
+            {periodLabel}
           </p>
         </div>
 
@@ -354,20 +403,6 @@ export default function DashboardPage() {
       )}
 
       {/* Demo clear */}
-      {hasData && (
-        <div className="mt-4 flex justify-end">
-          <button
-            className="btn btn-ghost btn-sm text-xs flex items-center gap-1"
-            style={{ color: "oklch(0.60 0.01 265)" }}
-            onClick={clearDemo}
-            id="clear-data-btn"
-          >
-            <Trash2 size={12} />
-            {t.clearDemo}
-          </button>
-        </div>
-      )}
-
       {/* Premium Upsell Banner – visible when not signed in */}
       {!user && hasData && (
         <Link

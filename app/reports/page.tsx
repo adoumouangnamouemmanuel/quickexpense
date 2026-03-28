@@ -22,7 +22,7 @@ import { db } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
 import { formatCurrency } from "../_lib/utils";
 
-type Period = "daily" | "weekly" | "monthly" | "yearly";
+type Period = "weekly" | "monthly" | "yearly" | "all";
 
 export default function ReportsPage() {
   const { t, language } = useLanguage();
@@ -38,26 +38,6 @@ export default function ReportsPage() {
   // ─── Chart data by period ─────────────────────────────────────────────────────
 
   const chartData = useMemo(() => {
-    if (period === "daily") {
-      const days: Record<
-        string,
-        { date: string; income: number; expenses: number }
-      > = {};
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().slice(0, 10);
-        days[key] = { date: format(d, "MMM d"), income: 0, expenses: 0 };
-      }
-      for (const tx of transactions) {
-        if (days[tx.date]) {
-          if (tx.type === "income") days[tx.date].income += tx.amount;
-          else days[tx.date].expenses += tx.amount;
-        }
-      }
-      return Object.values(days);
-    }
-
     if (period === "weekly") {
       const now = new Date();
       const start = new Date(now);
@@ -101,10 +81,28 @@ export default function ReportsPage() {
       return months;
     }
 
-    // yearly
+    if (period === "yearly") {
+      const years: { date: string; income: number; expenses: number }[] = [];
+      const thisYear = new Date().getFullYear();
+      for (let y = thisYear - 3; y <= thisYear; y++) {
+        let income = 0,
+          expenses = 0;
+        for (const tx of transactions) {
+          if (tx.date.startsWith(String(y))) {
+            if (tx.type === "income") income += tx.amount;
+            else expenses += tx.amount;
+          }
+        }
+        years.push({ date: String(y), income, expenses });
+      }
+      return years;
+    }
+
+    // all-time grouped by year
     const years: { date: string; income: number; expenses: number }[] = [];
-    const thisYear = new Date().getFullYear();
-    for (let y = thisYear - 3; y <= thisYear; y++) {
+    const yearSet = new Set(transactions.map((tx) => Number(tx.date.slice(0, 4))));
+    const sortedYears = Array.from(yearSet).filter(Boolean).sort((a, b) => a - b);
+    for (const y of sortedYears) {
       let income = 0,
         expenses = 0;
       for (const tx of transactions) {
@@ -122,10 +120,10 @@ export default function ReportsPage() {
   const totalExpenses = chartData.reduce((s, d) => s + d.expenses, 0);
 
   const periodLabels: Record<Period, string> = {
-    daily: t.daily,
     weekly: t.weekly,
     monthly: t.monthly,
     yearly: t.yearly,
+    all: t.allTime,
   };
 
   return (
@@ -141,8 +139,8 @@ export default function ReportsPage() {
 
       {/* Period tabs */}
       <div className="mb-4 overflow-x-auto hide-scrollbar">
-        <div className="inline-flex rounded-xl p-1.5 bg-[var(--color-surface-2)] border border-[var(--color-surface-3)] min-w-max">
-          {(["daily", "weekly", "monthly", "yearly"] as Period[]).map((p) => (
+        <div className="inline-flex rounded-xl p-1.5 bg-surface-2 border border-surface-3 min-w-max">
+          {(["weekly", "monthly", "yearly", "all"] as Period[]).map((p) => (
             <button
               key={p}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors font-semibold ${

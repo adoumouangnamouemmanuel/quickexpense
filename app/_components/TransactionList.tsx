@@ -357,7 +357,22 @@ export function TransactionList({
       ) : (
         <div className="flex flex-col">
           {filtered.map((tx) => (
-            <div key={tx.id} className="transaction-row group">
+            <div key={tx.id} className="transaction-row group items-start gap-3">
+              <div className="w-24 shrink-0 pt-0.5">
+                <span
+                  className="font-semibold text-sm block text-left"
+                  style={{
+                    color:
+                      tx.type === "income"
+                        ? "oklch(0.55 0.18 145)"
+                        : "oklch(0.58 0.22 25)",
+                  }}
+                >
+                  {tx.type === "income" ? "+" : "-"}
+                  {formatCurrency(tx.amount, tx.currency || currency)}
+                </span>
+              </div>
+
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                 style={{
@@ -374,11 +389,11 @@ export function TransactionList({
                     const debtDisplay = getDebtDisplay(tx);
                     return (
                       <>
-                        <p className="font-medium text-sm truncate">
+                        <p className="font-medium text-sm line-clamp-1">
                           {debtDisplay.person || getCategoryName(tx.categoryId)}
                         </p>
                         <p
-                          className="text-xs mt-0.5 truncate"
+                          className="text-xs mt-0.5 line-clamp-2 wrap-break-word"
                           style={{ color: "oklch(0.60 0.01 265)" }}
                         >
                           {formatDate(tx.date)} · {getCategoryName(tx.categoryId)}
@@ -389,11 +404,11 @@ export function TransactionList({
                   })()
                 ) : (
                   <>
-                    <p className="font-medium text-sm truncate">
+                    <p className="font-medium text-sm line-clamp-1 wrap-break-word">
                       {tx.note || getCategoryName(tx.categoryId)}
                     </p>
                     <p
-                      className="text-xs mt-0.5"
+                      className="text-xs mt-0.5 line-clamp-2 wrap-break-word"
                       style={{ color: "oklch(0.60 0.01 265)" }}
                     >
                       {formatDate(tx.date)} · {getCategoryName(tx.categoryId)}
@@ -402,21 +417,7 @@ export function TransactionList({
                 )}
               </div>
 
-              <div className="flex items-center gap-2 ml-2">
-                <span
-                  className="font-semibold text-sm"
-                  style={{
-                    color:
-                      tx.type === "income"
-                        ? "oklch(0.55 0.18 145)"
-                        : "oklch(0.58 0.22 25)",
-                  }}
-                >
-                  {tx.type === "income" ? "+" : "-"}
-                  {formatCurrency(tx.amount, tx.currency || currency)}
-                </span>
-
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0 ml-1">
                   <button
                     className="btn btn-ghost btn-icon btn-sm"
                     onClick={() => setEditTx(tx)}
@@ -434,7 +435,6 @@ export function TransactionList({
                   >
                     <Trash2 size={13} />
                   </button>
-                </div>
               </div>
             </div>
           ))}

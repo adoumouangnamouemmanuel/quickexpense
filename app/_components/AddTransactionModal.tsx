@@ -123,7 +123,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
     } finally {
       setSaving(false);
     }
-  }, [amount, type, categoryId, date, note, tags, currency, editTx, onClose]);
+  }, [amount, type, categoryId, date, personName, note, tags, currency, editTx, onClose, t.personNameRequired]);
 
   // Close on Escape
   useEffect(() => {
@@ -258,11 +258,11 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
         )}
 
         <div className="mb-5">
-          <label className="label">{t.note} <span style={{ color: 'oklch(0.60 0.01 265)', fontWeight: 400 }}>({t.optional})</span></label>
+          <label className="label">{t.expenseTitle || t.note} <span style={{ color: 'oklch(0.60 0.01 265)', fontWeight: 400 }}>({t.optional})</span></label>
           <input
             type="text"
             className="input"
-            placeholder={t.enterNote}
+            placeholder={t.enterExpenseTitle || t.enterNote}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             id="tx-note-input"
