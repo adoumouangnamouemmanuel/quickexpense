@@ -149,7 +149,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
 
         {/* Type switch */}
         <div
-          className="flex rounded-lg mb-4 p-1"
+          className="flex rounded-lg mb-5 p-1"
           style={{ background: 'var(--color-surface-3)' }}
         >
           {(['expense', 'income'] as TransactionType[]).map((tp) => (
@@ -175,7 +175,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
         </div>
 
         {/* Amount + Currency row */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-5">
           <div className="flex-1">
             <label className="label">{t.amount}</label>
             <input
@@ -206,13 +206,13 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
         </div>
 
         {/* Category */}
-        <div className="mb-4">
-          <label className="label">{t.category}</label>
-          <div className="grid grid-cols-3 gap-2">
+        <div className="mb-5">
+          <label className="label" style={{ marginBottom: '0.75rem' }}>{t.category}</label>
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
             {(categories ?? DEFAULT_CATEGORIES).map((cat) => (
               <button
                 key={cat.id}
-                className="flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-all"
+                className="flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] font-medium transition-all"
                 style={{
                   border: categoryId === cat.id ? `2px solid ${cat.color}` : '2px solid transparent',
                   background: categoryId === cat.id ? `${cat.color}18` : 'var(--color-surface-3)',
@@ -224,14 +224,14 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
                 <div className="w-8 h-8 flex items-center justify-center rounded-full bg-surface shadow-sm">
                   <IconRenderer name={cat.icon} size={16} />
                 </div>
-                <span className="text-center leading-tight truncate w-full px-1">{getCategoryName(cat)}</span>
+                <span className="text-center leading-tight truncate w-full px-0.5">{getCategoryName(cat)}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Date */}
-        <div className="mb-4">
+        <div className="mb-5">
           <label className="label">{t.date}</label>
           <input
             type="date"
@@ -244,7 +244,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
 
         {/* Note */}
         {DEBT_CATEGORY_IDS.has(categoryId) && (
-          <div className="mb-4">
+          <div className="mb-5">
             <label className="label">{t.personName}</label>
             <input
               type="text"
@@ -257,7 +257,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
           </div>
         )}
 
-        <div className="mb-4">
+        <div className="mb-5">
           <label className="label">{t.note} <span style={{ color: 'oklch(0.60 0.01 265)', fontWeight: 400 }}>({t.optional})</span></label>
           <input
             type="text"

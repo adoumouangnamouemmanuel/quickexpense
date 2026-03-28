@@ -18,6 +18,7 @@ interface RowData {
   amount: string;
   type: TransactionType;
   categoryId: string;
+  date: string;
   personName: string;
   note: string;
 }
@@ -34,6 +35,9 @@ export default function QuickAddPage() {
     DEFAULT_CATEGORIES
   );
 
+  const settings = useLiveQuery(() => db.settings.toArray(), []) ?? [];
+  const defaultCurrency = settings.find((s) => s.key === "currency")?.value ?? "$";
+
   const [rows, setRows] = useState<RowData[]>([]);
   const [saving, setSaving] = useState(false);
   const [pickingCategoryForRow, setPickingCategoryForRow] = useState<string | null>(null);
@@ -46,6 +50,7 @@ export default function QuickAddPage() {
         amount: '',
         type: 'expense' as TransactionType,
         categoryId: 'food',
+        date: todayISO(),
         personName: '',
         note: ''
       }));
@@ -63,6 +68,7 @@ export default function QuickAddPage() {
       amount: '',
       type: 'expense',
       categoryId: 'food',
+      date: todayISO(),
       personName: '',
       note: ''
     }]);
@@ -111,10 +117,10 @@ export default function QuickAddPage() {
         amount: parseFloat(r.amount),
         type: r.type,
         categoryId: r.categoryId,
-        date: todayISO(),
+        date: r.date,
         note: composedNote,
         tags: composedTags,
-        currency: '$', // Simplified for multi-add, assume default
+        currency: defaultCurrency,
         createdAt: Date.now() + Math.random(), // slight offset for stable sorting
       };
       }) as Transaction[];
@@ -231,6 +237,13 @@ export default function QuickAddPage() {
                     <ChevronDown size={14} className="text-gray-400 group-hover:text-black dark:group-hover:text-white" />
                   </button>
                 </div>
+
+                <input
+                  type="date"
+                  value={row.date}
+                  onChange={e => updateRow(row.id, 'date', e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-3 text-xs focus:outline-none focus:border-black dark:focus:border-white transition-colors text-black dark:text-white font-medium"
+                />
 
                 <input
                   type="text"

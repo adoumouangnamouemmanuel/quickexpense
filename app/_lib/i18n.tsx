@@ -230,7 +230,7 @@ const dictionaries = {
     debtTracking: "Mes bons",
     debtOutstanding: "Mes bons",
     moneyLent: "Argent prêté",
-    debtRepaid: "Remboursement reçu",
+    debtRepaid: "Mes bons",
     personName: "Nom de la personne qui a emprunté",
     enterPersonName: "Nom de la personne qui a emprunté",
     personNameRequired: "Veuillez saisir le nom de la personne pour mes bons.",

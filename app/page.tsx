@@ -112,19 +112,9 @@ export default function DashboardPage() {
               },
             )}
           </p>
-          <div className="flex items-end justify-between mt-1">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white">
-              {t.dashboard}
-            </h1>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={loadDemo}
-              id="try-demo-btn-top"
-            >
-              <Activity size={14} />
-              {t.tryDemo}
-            </button>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mt-1">
+            {t.dashboard}
+          </h1>
         </div>
       )}
 
