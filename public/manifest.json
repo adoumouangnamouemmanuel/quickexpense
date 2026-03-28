@@ -1,0 +1,40 @@
+{
+  "name": "QuickExpense",
+  "short_name": "QuickExpense",
+  "description": "A beautiful local-first expense tracker. Track income and expenses offline. No account needed.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f7ff",
+  "theme_color": "#7c3aed",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "short_name": "Expense",
+      "url": "/?action=addExpense",
+      "description": "Quickly add a new expense"
+    },
+    {
+      "name": "Add Income",
+      "short_name": "Income",
+      "url": "/?action=addIncome",
+      "description": "Quickly add income"
+    }
+  ]
+}

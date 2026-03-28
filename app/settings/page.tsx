@@ -1,0 +1,322 @@
+'use client';
+
+// Settings page
+import { useState, useEffect, useCallback } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { Save, Trash2, PlusCircle, X, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { db } from '../_lib/db';
+import { useLanguage } from '../_lib/i18n';
+import { CURRENCY_OPTIONS } from '../_lib/utils';
+import { DEFAULT_CATEGORIES, seedCategories } from '../_lib/categories';
+import { AppShell } from '../_components/AppShell';
+import { ThemeToggle } from '../_components/ThemeToggle';
+import { LanguageSwitcher } from '../_components/LanguageSwitcher';
+import { BudgetProgress } from '../_components/BudgetProgress';
+
+export default function SettingsPage() {
+  const { t, language } = useLanguage();
+
+  // ─── DB data ────────────────────────────────────────────────────────────────
+
+  const settings = useLiveQuery(() => db.settings.toArray(), []) ?? [];
+  const budgets = useLiveQuery(() => db.budgets.toArray(), []) ?? [];
+  const categories = useLiveQuery(() => db.categories.toArray(), [], DEFAULT_CATEGORIES) ?? DEFAULT_CATEGORIES;
+  const transactions = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
+
+  const currency = settings.find(s => s.key === 'currency')?.value ?? '$';
+
+  // ─── Local state ─────────────────────────────────────────────────────────────
+
+  const [selectedCurrency, setSelectedCurrency] = useState(currency);
+  const [globalBudgetInput, setGlobalBudgetInput] = useState('');
+  const [catBudgetInputs, setCatBudgetInputs] = useState<Record<string, string>>({});
+  const [newCatName, setNewCatName] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [deferredInstall, setDeferredInstall] = useState<Event | null>(null);
+
+  // Populate from DB
+  useEffect(() => {
+    setSelectedCurrency(currency);
+  }, [currency]);
+
+  useEffect(() => {
+    const gb = budgets.find(b => b.categoryId === null);
+    if (gb) setGlobalBudgetInput(String(gb.amount));
+    const catInputs: Record<string, string> = {};
+    for (const b of budgets.filter(b => b.categoryId !== null)) {
+      catInputs[b.categoryId!] = String(b.amount);
+    }
+    setCatBudgetInputs(catInputs);
+  }, [budgets]);
+
+  // PWA install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredInstall(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
+
+  const saveCurrency = async () => {
+    const { setSetting } = await import('../_lib/db');
+    await setSetting('currency', selectedCurrency);
+    toast.success('Currency saved!');
+  };
+
+  const saveGlobalBudget = async () => {
+    const amt = parseFloat(globalBudgetInput);
+    if (isNaN(amt) || amt < 0) { toast.error('Invalid amount'); return; }
+    const existing = budgets.find(b => b.categoryId === null);
+    if (existing?.id !== undefined) {
+      await db.budgets.update(existing.id, { amount: amt });
+    } else {
+      await db.budgets.add({ categoryId: null, amount: amt, period: 'monthly' });
+    }
+    toast.success(t.setBudget + ' saved!');
+  };
+
+  const saveCatBudget = async (catId: string) => {
+    const amt = parseFloat(catBudgetInputs[catId] ?? '');
+    if (isNaN(amt) || amt < 0) { toast.error('Invalid amount'); return; }
+    const existing = budgets.find(b => b.categoryId === catId);
+    if (existing?.id !== undefined) {
+      await db.budgets.update(existing.id, { amount: amt });
+    } else {
+      await db.budgets.add({ categoryId: catId, amount: amt, period: 'monthly' });
+    }
+    toast.success('Budget saved!');
+  };
+
+  const addCustomCategory = async () => {
+    if (!newCatName.trim()) return;
+    await seedCategories();
+    const id = newCatName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    await db.categories.put({
+      id: `custom-${id}-${Date.now()}`,
+      nameEn: newCatName,
+      nameFr: newCatName,
+      icon: '🏷️',
+      color: '#6366f1',
+      isCustom: true,
+    });
+    setNewCatName('');
+    toast.success('Category added!');
+  };
+
+  const deleteCustomCategory = async (id: string) => {
+    await db.categories.delete(id);
+    toast.success('Category deleted');
+  };
+
+  const clearAllData = async () => {
+    const { clearAllData: clear } = await import('../_lib/sampleData');
+    await clear();
+    setConfirmClear(false);
+    toast.success('All data cleared');
+  };
+
+  const installPWA = async () => {
+    if (!deferredInstall) return;
+    const prompt = deferredInstall as BeforeInstallPromptEvent;
+    prompt.prompt?.();
+    const result = await prompt.userChoice;
+    if (result.outcome === 'accepted') setDeferredInstall(null);
+  };
+
+  const monthTxs = transactions.filter(tx => tx.date.startsWith(new Date().toISOString().slice(0, 7)));
+
+  return (
+    <AppShell>
+      <div className="mb-4 hidden md:block">
+        <h1 className="text-xl font-bold">{t.settings}</h1>
+      </div>
+
+      <div className="flex flex-col gap-4 max-w-xl">
+
+        {/* Language & Theme */}
+        <div className="card">
+          <h2 className="font-semibold mb-3 text-sm">{t.language} & {t.theme}</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium mb-1">{t.language}</p>
+              <LanguageSwitcher />
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">{t.theme}</p>
+              <ThemeToggle />
+            </div>
+          </div>
+        </div>
+
+        {/* Currency */}
+        <div className="card">
+          <h2 className="font-semibold mb-3 text-sm">{t.currencySymbol}</h2>
+          <div className="flex gap-2">
+            <select
+              className="input select flex-1"
+              value={selectedCurrency}
+              onChange={e => setSelectedCurrency(e.target.value)}
+              id="currency-select"
+            >
+              {CURRENCY_OPTIONS.map(opt => (
+                <option key={opt.symbol} value={opt.symbol}>{opt.label}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={saveCurrency} id="save-currency-btn">
+              <Save size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Monthly budget */}
+        <div className="card">
+          <h2 className="font-semibold mb-3 text-sm">{t.monthlyBudget}</h2>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="number"
+              className="input flex-1"
+              placeholder="e.g. 2000"
+              value={globalBudgetInput}
+              onChange={e => setGlobalBudgetInput(e.target.value)}
+              min="0"
+              id="global-budget-input"
+            />
+            <button className="btn btn-primary" onClick={saveGlobalBudget} id="save-budget-btn">
+              <Save size={15} />
+            </button>
+          </div>
+
+          {budgets.find(b => b.categoryId === null) && (
+            <BudgetProgress
+              budget={budgets.find(b => b.categoryId === null)!}
+              transactions={monthTxs}
+              currency={selectedCurrency}
+            />
+          )}
+        </div>
+
+        {/* Category budgets */}
+        <div className="card">
+          <h2 className="font-semibold mb-3 text-sm">{t.categoryBudgets}</h2>
+          <div className="flex flex-col gap-3">
+            {categories.slice(0, 8).map((cat) => {
+              const catName = language === 'fr' ? cat.nameFr : cat.nameEn;
+              return (
+                <div key={cat.id}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span>{cat.icon}</span>
+                    <span className="text-sm font-medium flex-1">{catName}</span>
+                    <input
+                      type="number"
+                      className="input"
+                      style={{ width: '7rem' }}
+                      placeholder="Budget"
+                      value={catBudgetInputs[cat.id] ?? ''}
+                      onChange={e => setCatBudgetInputs(prev => ({ ...prev, [cat.id]: e.target.value }))}
+                      min="0"
+                      id={`cat-budget-${cat.id}`}
+                    />
+                    <button
+                      className="btn btn-primary btn-sm btn-icon"
+                      onClick={() => saveCatBudget(cat.id)}
+                      id={`save-cat-budget-${cat.id}`}
+                    >
+                      <Save size={12} />
+                    </button>
+                  </div>
+                  {budgets.find(b => b.categoryId === cat.id) && (
+                    <BudgetProgress
+                      budget={budgets.find(b => b.categoryId === cat.id)!}
+                      transactions={monthTxs}
+                      category={cat}
+                      currency={selectedCurrency}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Custom categories */}
+        <div className="card">
+          <h2 className="font-semibold mb-3 text-sm">Custom Categories</h2>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              className="input flex-1"
+              placeholder="New category name"
+              value={newCatName}
+              onChange={e => setNewCatName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addCustomCategory()}
+              id="new-cat-input"
+            />
+            <button className="btn btn-primary" onClick={addCustomCategory} id="add-cat-btn">
+              <PlusCircle size={15} />
+            </button>
+          </div>
+          {categories.filter(c => c.isCustom).map(cat => (
+            <div key={cat.id} className="flex items-center gap-2 mb-1.5">
+              <span>{cat.icon}</span>
+              <span className="text-sm flex-1">{cat.nameEn}</span>
+              <button
+                className="btn btn-ghost btn-icon btn-sm"
+                style={{ color: 'oklch(0.58 0.22 25)' }}
+                onClick={() => deleteCustomCategory(cat.id)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* PWA Install */}
+        {deferredInstall && (
+          <div className="card" style={{ background: 'linear-gradient(135deg, oklch(0.52 0.24 265 / 0.1), oklch(0.44 0.22 285 / 0.05))', border: '1px solid oklch(0.52 0.24 265 / 0.2)' }}>
+            <h2 className="font-semibold mb-1 text-sm">{t.installApp}</h2>
+            <p className="text-xs mb-3" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.installHint}</p>
+            <button className="btn btn-primary flex items-center gap-1.5" onClick={installPWA} id="install-pwa-btn">
+              <Download size={15} />
+              {t.installApp}
+            </button>
+          </div>
+        )}
+
+        {/* Danger zone */}
+        <div className="card" style={{ border: '1px solid oklch(0.58 0.22 25 / 0.3)' }}>
+          <h2 className="font-semibold mb-2 text-sm" style={{ color: 'oklch(0.58 0.22 25)' }}>Danger Zone</h2>
+          {confirmClear ? (
+            <div>
+              <p className="text-sm mb-3">{t.confirmDeleteAll}</p>
+              <div className="flex gap-2">
+                <button className="btn btn-secondary" onClick={() => setConfirmClear(false)}>{t.cancel}</button>
+                <button className="btn btn-danger" onClick={clearAllData} id="confirm-clear-btn">{t.delete}</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="btn btn-danger flex items-center gap-1.5"
+              onClick={() => setConfirmClear(true)}
+              id="clear-all-btn"
+            >
+              <Trash2 size={15} />
+              {t.clearAllData}
+            </button>
+          )}
+        </div>
+
+      </div>
+    </AppShell>
+  );
+}
+
+// PWA type helper
+interface BeforeInstallPromptEvent extends Event {
+  prompt?: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}

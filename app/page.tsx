@@ -1,65 +1,255 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+// Dashboard – Home Page
+import { useState, useCallback } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { TrendingUp, TrendingDown, Wallet, Sparkles, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { db } from './_lib/db';
+import { useLanguage } from './_lib/i18n';
+import { formatCurrency, currentMonthISO } from './_lib/utils';
+import { DEFAULT_CATEGORIES, seedCategories } from './_lib/categories';
+import { AppShell } from './_components/AppShell';
+import { AddTransactionModal } from './_components/AddTransactionModal';
+import { FAB } from './_components/FAB';
+import { BudgetProgress } from './_components/BudgetProgress';
+import { ExpensePieChart, CategoryLegend, SpendingLineChart } from './_components/Charts';
+import { TransactionList } from './_components/TransactionList';
+
+export default function DashboardPage() {
+  const { t } = useLanguage();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'expense' | 'income'>('expense');
+
+  // ─── Live data ───────────────────────────────────────────────────────────────
+
+  const month = currentMonthISO();
+
+  const allTransactions = useLiveQuery(() =>
+    db.transactions.orderBy('date').reverse().toArray(), []
+  ) ?? [];
+
+  const monthTransactions = useLiveQuery(() =>
+    db.transactions.where('date').startsWith(month).toArray(), [month]
+  ) ?? [];
+
+  const categories = useLiveQuery(() => db.categories.toArray(), [], DEFAULT_CATEGORIES) ?? DEFAULT_CATEGORIES;
+
+  const budgets = useLiveQuery(() => db.budgets.toArray(), []) ?? [];
+
+  const settings = useLiveQuery(() => db.settings.toArray(), []) ?? [];
+  const currency = settings.find(s => s.key === 'currency')?.value ?? '$';
+
+  // ─── Stats ────────────────────────────────────────────────────────────────────
+
+  const totalIncome = monthTransactions
+    .filter(tx => tx.type === 'income')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const totalExpenses = monthTransactions
+    .filter(tx => tx.type === 'expense')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const balance = totalIncome - totalExpenses;
+
+  const globalBudget = budgets.find(b => b.categoryId === null);
+
+  // ─── Demo data ────────────────────────────────────────────────────────────────
+
+  const loadDemo = useCallback(async () => {
+    const { seedSampleData } = await import('./_lib/sampleData');
+    await seedSampleData();
+    toast.success('Sample data loaded!');
+  }, []);
+
+  const clearDemo = useCallback(async () => {
+    const { clearAllData } = await import('./_lib/sampleData');
+    await clearAllData();
+    toast.success('Data cleared');
+  }, []);
+
+  // ─── Open modal ────────────────────────────────────────────────────────────────
+
+  const openModal = (type: 'expense' | 'income') => {
+    seedCategories(); // ensure categories seeded
+    setModalType(type);
+    setModalOpen(true);
+  };
+
+  const hasData = allTransactions.length > 0;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <AppShell>
+      {/* Welcome / empty state */}
+      {!hasData && (
+        <div
+          className="card mb-6 text-center py-10"
+          style={{
+            background: 'linear-gradient(135deg, oklch(0.52 0.24 265 / 0.08), oklch(0.44 0.22 285 / 0.04))',
+            border: '1px solid oklch(0.52 0.24 265 / 0.2)',
+          }}
+        >
+          <div
+            className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, oklch(0.52 0.24 265), oklch(0.44 0.22 285))' }}
+          >
+            <Sparkles size={24} className="text-white" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Welcome to QuickExpense</h2>
+          <p className="text-sm mb-5" style={{ color: 'oklch(0.55 0.01 265)' }}>
+            {t.tagline}
           </p>
+          <div className="flex gap-2 justify-center flex-wrap">
+            <button
+              className="btn btn-primary"
+              onClick={() => openModal('expense')}
+              id="start-tracking-btn"
+            >
+              {t.addExpense}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={loadDemo}
+              id="try-demo-btn"
+            >
+              ✨ {t.tryDemo}
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      )}
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        {/* Income */}
+        <div className="card stat-income">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium" style={{ color: 'oklch(0.55 0.18 145)' }}>{t.totalIncome}</span>
+            <TrendingUp size={16} style={{ color: 'oklch(0.55 0.18 145)' }} />
+          </div>
+          <p className="text-2xl font-bold" style={{ color: 'oklch(0.45 0.18 145)' }}>
+            {formatCurrency(totalIncome, currency)}
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.thisMonth}</p>
+        </div>
+
+        {/* Expenses */}
+        <div className="card stat-expense">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium" style={{ color: 'oklch(0.58 0.22 25)' }}>{t.totalExpenses}</span>
+            <TrendingDown size={16} style={{ color: 'oklch(0.58 0.22 25)' }} />
+          </div>
+          <p className="text-2xl font-bold" style={{ color: 'oklch(0.48 0.22 25)' }}>
+            {formatCurrency(totalExpenses, currency)}
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.thisMonth}</p>
+        </div>
+
+        {/* Balance */}
+        <div className="card stat-balance">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium" style={{ color: 'oklch(0.52 0.24 265)' }}>{t.balance}</span>
+            <Wallet size={16} style={{ color: 'oklch(0.52 0.24 265)' }} />
+          </div>
+          <p
+            className="text-2xl font-bold"
+            style={{ color: balance >= 0 ? 'oklch(0.45 0.18 145)' : 'oklch(0.48 0.22 25)' }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            {balance >= 0 ? '' : '-'}{formatCurrency(Math.abs(balance), currency)}
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'oklch(0.60 0.01 265)' }}>{t.thisMonth}</p>
+        </div>
+      </div>
+
+      {/* Budget progress */}
+      {globalBudget && (
+        <div className="card mb-6">
+          <h2 className="font-semibold mb-3 text-sm">{t.monthlyBudget}</h2>
+          <BudgetProgress
+            budget={globalBudget}
+            transactions={monthTransactions}
+            category={null}
+            currency={currency}
+          />
+        </div>
+      )}
+
+      {/* Charts row */}
+      {hasData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* Pie chart */}
+          <div className="card">
+            <h2 className="font-semibold mb-3 text-sm">{t.expensesByCategory}</h2>
+            <ExpensePieChart
+              transactions={monthTransactions}
+              categories={categories}
+              currency={currency}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <CategoryLegend
+              transactions={monthTransactions}
+              categories={categories}
+              currency={currency}
+            />
+          </div>
+
+          {/* Line chart */}
+          <div className="card">
+            <h2 className="font-semibold mb-3 text-sm">{t.spendingTrend}</h2>
+            <SpendingLineChart transactions={allTransactions} currency={currency} />
+          </div>
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* Recent transactions */}
+      {hasData && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm">{t.transactions}</h2>
+            <a
+              href="/transactions"
+              className="text-xs font-medium"
+              style={{ color: 'oklch(0.52 0.24 265)' }}
+            >
+              View all →
+            </a>
+          </div>
+          <TransactionList
+            transactions={allTransactions}
+            categories={categories}
+            currency={currency}
+            showFilters={false}
+            limit={8}
+          />
+        </div>
+      )}
+
+      {/* Demo clear */}
+      {hasData && (
+        <div className="mt-4 flex justify-end">
+          <button
+            className="btn btn-ghost btn-sm text-xs flex items-center gap-1"
+            style={{ color: 'oklch(0.60 0.01 265)' }}
+            onClick={clearDemo}
+            id="clear-data-btn"
+          >
+            <Trash2 size={12} />
+            {t.clearDemo}
+          </button>
+        </div>
+      )}
+
+      {/* FAB */}
+      <FAB
+        onAddExpense={() => openModal('expense')}
+        onAddIncome={() => openModal('income')}
+      />
+
+      {/* Add modal */}
+      <AddTransactionModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        defaultType={modalType}
+        defaultCurrency={currency}
+      />
+    </AppShell>
   );
 }

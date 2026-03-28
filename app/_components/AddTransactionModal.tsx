@@ -1,0 +1,252 @@
+'use client';
+
+// Add / Edit Transaction Modal
+import { useState, useEffect, useCallback } from 'react';
+import { X, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+import { db, type Transaction, type TransactionType } from '../_lib/db';
+import { useLanguage } from '../_lib/i18n';
+import { todayISO } from '../_lib/utils';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { DEFAULT_CATEGORIES } from '../_lib/categories';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  editTx?: Transaction | null;
+  defaultType?: TransactionType;
+  defaultCurrency?: string;
+}
+
+export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expense', defaultCurrency = '$' }: Props) {
+  const { t, language } = useLanguage();
+
+  const [amount, setAmount] = useState('');
+  const [type, setType] = useState<TransactionType>(defaultType);
+  const [categoryId, setCategoryId] = useState('food');
+  const [date, setDate] = useState(todayISO());
+  const [note, setNote] = useState('');
+  const [tags, setTags] = useState('');
+  const [currency, setCurrency] = useState(defaultCurrency);
+  const [saving, setSaving] = useState(false);
+
+  const categories = useLiveQuery(
+    () => db.categories.toArray(),
+    [],
+    DEFAULT_CATEGORIES
+  );
+
+  // Populate fields when editing
+  useEffect(() => {
+    if (editTx) {
+      setAmount(String(editTx.amount));
+      setType(editTx.type);
+      setCategoryId(editTx.categoryId);
+      setDate(editTx.date);
+      setNote(editTx.note ?? '');
+      setTags(editTx.tags?.join(', ') ?? '');
+      setCurrency(editTx.currency ?? defaultCurrency);
+    } else {
+      setAmount('');
+      setType(defaultType);
+      setCategoryId('food');
+      setDate(todayISO());
+      setNote('');
+      setTags('');
+      setCurrency(defaultCurrency);
+    }
+  }, [editTx, defaultType, defaultCurrency, open]);
+
+  const handleSave = useCallback(async () => {
+    const amt = parseFloat(amount);
+    if (!amount || isNaN(amt) || amt <= 0) {
+      toast.error('Please enter a valid amount');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const tx: Omit<Transaction, 'id'> = {
+        amount: amt,
+        type,
+        categoryId,
+        date,
+        note: note.trim(),
+        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        currency,
+        createdAt: editTx?.createdAt ?? Date.now(),
+      };
+
+      if (editTx?.id !== undefined) {
+        await db.transactions.update(editTx.id, tx);
+        toast.success('Transaction updated!');
+      } else {
+        await db.transactions.add(tx as Transaction);
+        toast.success('Transaction saved!');
+      }
+      onClose();
+    } catch (err) {
+      toast.error('Failed to save transaction');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  }, [amount, type, categoryId, date, note, tags, currency, editTx, onClose]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const getCategoryName = (cat: typeof DEFAULT_CATEGORIES[number]) =>
+    language === 'fr' ? cat.nameFr : cat.nameEn;
+
+  return (
+    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-content" role="dialog" aria-modal="true" aria-label={editTx ? t.editTransaction : t.addTransaction}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-semibold">{editTx ? t.editTransaction : t.addTransaction}</h2>
+          <button className="btn btn-ghost btn-icon" onClick={onClose} aria-label={t.cancel}><X size={18} /></button>
+        </div>
+
+        {/* Type switch */}
+        <div
+          className="flex rounded-lg mb-4 p-1"
+          style={{ background: 'var(--color-surface-3)' }}
+        >
+          {(['expense', 'income'] as TransactionType[]).map((tp) => (
+            <button
+              key={tp}
+              className="flex-1 btn btn-sm"
+              style={{
+                borderRadius: '0.5rem',
+                background: type === tp
+                  ? tp === 'expense'
+                    ? 'oklch(0.58 0.22 25)'
+                    : 'oklch(0.55 0.18 145)'
+                  : 'transparent',
+                color: type === tp ? 'white' : 'inherit',
+                fontWeight: type === tp ? 600 : 400,
+              }}
+              onClick={() => setType(tp)}
+              id={`type-switch-${tp}`}
+            >
+              {tp === 'expense' ? t.expense : t.income}
+            </button>
+          ))}
+        </div>
+
+        {/* Amount + Currency row */}
+        <div className="flex gap-2 mb-4">
+          <div className="flex-1">
+            <label className="label">{t.amount}</label>
+            <input
+              type="number"
+              className="input"
+              placeholder={t.enterAmount}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              min="0"
+              step="0.01"
+              autoFocus
+              id="tx-amount-input"
+            />
+          </div>
+          <div className="w-24">
+            <label className="label">{t.currency}</label>
+            <select
+              className="input select"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              id="tx-currency-select"
+            >
+              {['$', '€', '£', '¥', 'CFA', '₦', 'C$', 'CHF'].map(sym => (
+                <option key={sym} value={sym}>{sym}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Category */}
+        <div className="mb-4">
+          <label className="label">{t.category}</label>
+          <div className="grid grid-cols-3 gap-2">
+            {(categories ?? DEFAULT_CATEGORIES).map((cat) => (
+              <button
+                key={cat.id}
+                className="flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  border: categoryId === cat.id ? `2px solid ${cat.color}` : '2px solid transparent',
+                  background: categoryId === cat.id ? `${cat.color}18` : 'var(--color-surface-3)',
+                  color: categoryId === cat.id ? cat.color : 'inherit',
+                }}
+                onClick={() => setCategoryId(cat.id)}
+                id={`cat-btn-${cat.id}`}
+              >
+                <span className="text-lg">{cat.icon}</span>
+                <span className="text-center leading-tight">{getCategoryName(cat)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date */}
+        <div className="mb-4">
+          <label className="label">{t.date}</label>
+          <input
+            type="date"
+            className="input"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            id="tx-date-input"
+          />
+        </div>
+
+        {/* Note */}
+        <div className="mb-4">
+          <label className="label">{t.note} <span style={{ color: 'oklch(0.60 0.01 265)', fontWeight: 400 }}>({t.optional})</span></label>
+          <input
+            type="text"
+            className="input"
+            placeholder={t.enterNote}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            id="tx-note-input"
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="mb-5">
+          <label className="label">{t.tags} <span style={{ color: 'oklch(0.60 0.01 265)', fontWeight: 400 }}>({t.optional})</span></label>
+          <input
+            type="text"
+            className="input"
+            placeholder={t.enterTags}
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            id="tx-tags-input"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 justify-end">
+          <button className="btn btn-secondary" onClick={onClose} id="tx-cancel-btn">{t.cancel}</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSave}
+            disabled={saving}
+            id="tx-save-btn"
+          >
+            {saving ? '…' : t.save}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
