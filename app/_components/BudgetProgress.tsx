@@ -2,9 +2,9 @@
 
 // Budget progress bars with alert indicators
 import { AlertTriangle } from 'lucide-react';
+import type { Budget, Category, Transaction } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
-import { formatCurrency, clamp } from '../_lib/utils';
-import type { Budget, Transaction, Category } from '../_lib/db';
+import { clamp, formatCurrency } from '../_lib/utils';
 
 interface BudgetProgressProps {
   budget: Budget;
