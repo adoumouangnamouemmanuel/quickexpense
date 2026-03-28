@@ -2,6 +2,7 @@
 
 // Transactions page – full list with filters
 import { useLiveQuery } from "dexie-react-hooks";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "../_components/AppShell";
 import { FAB } from "../_components/FAB";
 import { TransactionList } from "../_components/TransactionList";
@@ -11,6 +12,9 @@ import { useLanguage } from "../_lib/i18n";
 
 export default function TransactionsPage() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const initialCategoryFilter =
+    searchParams.get("scope") === "mes-bons" ? "debt" : "all";
 
   const transactions =
     useLiveQuery(
@@ -42,6 +46,7 @@ export default function TransactionsPage() {
           categories={categories}
           currency={currency}
           showFilters={true}
+          initialCategoryFilter={initialCategoryFilter}
         />
       </div>
 

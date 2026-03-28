@@ -96,6 +96,13 @@ const dictionaries = {
     installApp: "Install App",
     installHint:
       "Add QuickExpense to your home screen for the best experience.",
+    debtTracking: "Debt Tracking",
+    debtOutstanding: "Outstanding Debt",
+    moneyLent: "Money Lent",
+    debtRepaid: "Debt Repaid",
+    personName: "Person Name",
+    enterPersonName: "Who is this debt for?",
+    personNameRequired: "Please enter the person's name for debt entries.",
 
     // Budget alerts
     budgetNear: "You're approaching your budget limit!",
@@ -105,7 +112,11 @@ const dictionaries = {
     remaining: "remaining",
 
     // Misc
+    welcome: "Welcome",
     fastEntry: "Quick Add",
+    entry: "Entry",
+    bulkHint: "Any empty rows will be skipped automatically.",
+    addAnotherEntry: "Add Another Entry",
     thisMonth: "This Month",
     noTransactions: "No transactions found.",
     loading: "Loading…",
@@ -216,6 +227,13 @@ const dictionaries = {
     installApp: "Installer l'application",
     installHint:
       "Ajoutez QuickExpense à votre écran d'accueil pour la meilleure expérience.",
+    debtTracking: "Mes bons",
+    debtOutstanding: "Mes bons",
+    moneyLent: "Argent prêté",
+    debtRepaid: "Remboursement reçu",
+    personName: "Nom de la personne qui a emprunté",
+    enterPersonName: "Nom de la personne qui a emprunté",
+    personNameRequired: "Veuillez saisir le nom de la personne pour mes bons.",
 
     // Budget alerts
     budgetNear: "Vous approchez de la limite de votre budget !",
@@ -225,7 +243,11 @@ const dictionaries = {
     remaining: "restant",
 
     // Misc
+    welcome: "Bienvenue",
     fastEntry: "Ajout rapide",
+    entry: "Entrée",
+    bulkHint: "Les lignes vides seront ignorées automatiquement.",
+    addAnotherEntry: "Ajouter une entrée",
     thisMonth: "Ce mois-ci",
     noTransactions: "Aucune transaction trouvée.",
     loading: "Chargement…",

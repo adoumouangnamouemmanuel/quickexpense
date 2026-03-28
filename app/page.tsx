@@ -4,6 +4,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Activity,
+  HandCoins,
   Star,
   Trash2,
   TrendingDown,
@@ -70,6 +71,15 @@ export default function DashboardPage() {
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const balance = totalIncome - totalExpenses;
+  const totalMoneyLent = allTransactions
+    .filter((tx) => tx.type === "expense" && tx.categoryId === "money-lent")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const totalDebtRepaid = allTransactions
+    .filter((tx) => tx.type === "income" && tx.categoryId === "debt-repaid")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const debtOutstanding = Math.max(totalMoneyLent - totalDebtRepaid, 0);
 
   const globalBudget = budgets.find((b) => b.categoryId === null);
 
@@ -132,7 +142,7 @@ export default function DashboardPage() {
             />
           </div>
           <h2 className="text-2xl font-bold tracking-tight mb-2 text-black dark:text-white">
-            Welcome
+            {t.welcome}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-64 mx-auto leading-relaxed">
             {t.tagline}
@@ -158,7 +168,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {/* Income */}
         <div className="card stat-income">
           <div className="flex items-center justify-between mb-2">
@@ -204,7 +214,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Balance */}
-        <div className="card stat-balance col-span-2 sm:col-span-1">
+        <div className="card stat-balance">
           <div className="flex items-center justify-between mb-2">
             <span
               className="text-xs font-medium"
@@ -228,7 +238,64 @@ export default function DashboardPage() {
             {t.thisMonth}
           </p>
         </div>
+
+        {/* Total debt */}
+        <Link href="/transactions?scope=mes-bons" className="card block">
+          <div className="flex items-center justify-between mb-2">
+            <span
+              className="text-xs font-medium"
+              style={{ color: "oklch(0.58 0.22 25)" }}
+            >
+              {t.debtOutstanding}
+            </span>
+            <HandCoins size={16} style={{ color: "oklch(0.58 0.22 25)" }} />
+          </div>
+          <p
+            className="text-2xl font-bold"
+            style={{ color: "oklch(0.58 0.22 25)" }}
+          >
+            {formatCurrency(debtOutstanding, currency)}
+          </p>
+          <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
+            {t.thisMonth}
+          </p>
+        </Link>
       </div>
+
+      {(totalMoneyLent > 0 || totalDebtRepaid > 0) && (
+        <div className="card mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm">{t.debtTracking}</h2>
+            <HandCoins size={16} className="text-gray-500" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-xl border border-surface-3 bg-surface-2 p-3">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.moneyLent}
+              </p>
+              <p className="mt-1 text-sm sm:text-base font-bold text-black dark:text-white">
+                {formatCurrency(totalMoneyLent, currency)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-surface-3 bg-surface-2 p-3">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.debtRepaid}
+              </p>
+              <p className="mt-1 text-sm sm:text-base font-bold text-black dark:text-white">
+                {formatCurrency(totalDebtRepaid, currency)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-surface-3 bg-surface-2 p-3">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.debtOutstanding}
+              </p>
+              <p className="mt-1 text-sm sm:text-base font-bold text-amber-600 dark:text-amber-500">
+                {formatCurrency(debtOutstanding, currency)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Budget progress */}
       {globalBudget && (

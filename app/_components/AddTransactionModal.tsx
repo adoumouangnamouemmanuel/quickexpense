@@ -1,14 +1,14 @@
 'use client';
 
 // Add / Edit Transaction Modal
-import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { DEFAULT_CATEGORIES } from '../_lib/categories';
 import { db, type Transaction, type TransactionType } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
-import { todayISO, CURRENCY_OPTIONS } from '../_lib/utils';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { DEFAULT_CATEGORIES } from '../_lib/categories';
+import { CURRENCY_OPTIONS, todayISO } from '../_lib/utils';
 import { IconRenderer } from './IconRenderer';
 
 interface Props {
@@ -19,6 +19,8 @@ interface Props {
   defaultCurrency?: string;
 }
 
+const DEBT_CATEGORY_IDS = new Set(['money-lent', 'debt-repaid']);
+
 export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expense', defaultCurrency = '$' }: Props) {
   const { t, language } = useLanguage();
 
@@ -26,6 +28,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
   const [type, setType] = useState<TransactionType>(defaultType);
   const [categoryId, setCategoryId] = useState('food');
   const [date, setDate] = useState(todayISO());
+  const [personName, setPersonName] = useState('');
   const [note, setNote] = useState('');
   const [tags, setTags] = useState('');
   const [currency, setCurrency] = useState(defaultCurrency);
@@ -45,6 +48,8 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
       setCategoryId(editTx.categoryId);
       setDate(editTx.date);
       setNote(editTx.note ?? '');
+      const personTag = editTx.tags?.find((tag) => tag.startsWith('person:'));
+      setPersonName(personTag ? personTag.replace(/^person:/, '') : '');
       setTags(editTx.tags?.join(', ') ?? '');
       setCurrency(editTx.currency ?? defaultCurrency);
     } else {
@@ -52,6 +57,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
       setType(defaultType);
       setCategoryId('food');
       setDate(todayISO());
+      setPersonName('');
       setNote('');
       setTags('');
       setCurrency(defaultCurrency);
@@ -65,15 +71,31 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
       return;
     }
 
+    const isDebtEntry = DEBT_CATEGORY_IDS.has(categoryId);
+    const normalizedPerson = personName.trim();
+    if (isDebtEntry && !normalizedPerson) {
+      toast.error(t.personNameRequired || "Please enter the person's name for debt entries.");
+      return;
+    }
+
     setSaving(true);
     try {
+      const baseTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+      const mergedTags = isDebtEntry
+        ? Array.from(new Set([...baseTags, `person:${normalizedPerson.toLowerCase()}`]))
+        : baseTags;
+
+      const composedNote = isDebtEntry
+        ? (note.trim() ? `${normalizedPerson}: ${note.trim()}` : normalizedPerson)
+        : note.trim();
+
       const tx: Omit<Transaction, 'id'> = {
         amount: amt,
         type,
         categoryId,
         date,
-        note: note.trim(),
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        note: composedNote,
+        tags: mergedTags,
         currency,
         createdAt: editTx?.createdAt ?? Date.now(),
       };
@@ -199,7 +221,7 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
                 onClick={() => setCategoryId(cat.id)}
                 id={`cat-btn-${cat.id}`}
               >
-                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface)] shadow-sm">
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-surface shadow-sm">
                   <IconRenderer name={cat.icon} size={16} />
                 </div>
                 <span className="text-center leading-tight truncate w-full px-1">{getCategoryName(cat)}</span>
@@ -221,6 +243,20 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
         </div>
 
         {/* Note */}
+        {DEBT_CATEGORY_IDS.has(categoryId) && (
+          <div className="mb-4">
+            <label className="label">{t.personName}</label>
+            <input
+              type="text"
+              className="input"
+              placeholder={t.enterPersonName || 'Who is this debt for?'}
+              value={personName}
+              onChange={(e) => setPersonName(e.target.value)}
+              id="tx-person-name-input"
+            />
+          </div>
+        )}
+
         <div className="mb-4">
           <label className="label">{t.note} <span style={{ color: 'oklch(0.60 0.01 265)', fontWeight: 400 }}>({t.optional})</span></label>
           <input

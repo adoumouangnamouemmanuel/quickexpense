@@ -1,9 +1,25 @@
-import {
-  Home, ShoppingCart, Activity, ShieldPlus, Shirt, Gift,
-  Coffee, Plane, HeartPulse, GraduationCap, Users, Music, Utensils,
-  Car, Lightbulb, Smartphone, Wallet, HelpCircle
-} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  Car,
+  CircleDollarSign,
+  Coffee,
+  Gift,
+  GraduationCap,
+  HandCoins,
+  HeartPulse,
+  HelpCircle,
+  Home,
+  Lightbulb,
+  Music,
+  Plane,
+  ShieldPlus, Shirt,
+  ShoppingCart,
+  Smartphone,
+  Users,
+  Utensils,
+  Wallet
+} from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
   'Home': Home,
@@ -23,6 +39,8 @@ const iconMap: Record<string, LucideIcon> = {
   'Lightbulb': Lightbulb,
   'Smartphone': Smartphone,
   'Wallet': Wallet,
+  'HandCoins': HandCoins,
+  'CircleDollarSign': CircleDollarSign,
   'HelpCircle': HelpCircle,
 };
 

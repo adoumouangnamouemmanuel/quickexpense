@@ -3,12 +3,13 @@
 import {
   BarChart3,
   LayoutDashboard,
+  LogIn,
   ReceiptText,
   Settings,
-  User,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../_lib/auth";
 import { useLanguage } from "../_lib/i18n";
 
 const NAV_ITEMS = [
@@ -16,19 +17,26 @@ const NAV_ITEMS = [
   { href: "/transactions", label: "Transactions", icon: ReceiptText },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { user } = useAuth();
+
+  const navItems = user
+    ? NAV_ITEMS
+    : [
+        ...NAV_ITEMS,
+        { href: "/login", label: t.login, icon: LogIn },
+      ];
 
   const labels: Record<string, string> = {
     "/": t.dashboard,
     "/transactions": t.transactions,
     "/reports": t.reports,
     "/settings": t.settings,
-    "/profile": "Profile",
+    "/login": t.login,
   };
 
   // Hide on auth pages
@@ -37,9 +45,9 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-40 md:hidden pb-[env(safe-area-inset-bottom)] border-t border-[var(--color-surface-3)] bg-[var(--color-surface-glass)] backdrop-blur-xl">
+    <nav className="fixed bottom-0 left-0 w-full z-40 md:hidden pb-[env(safe-area-inset-bottom)] border-t border-surface-3 bg-surface-glass backdrop-blur-xl">
       <div className="flex items-center justify-around px-2 py-2.5">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
 

@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [newCatName, setNewCatName] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [deferredInstall, setDeferredInstall] = useState<Event | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   // Populate from DB
   useEffect(() => {
@@ -63,6 +64,11 @@ export default function SettingsPage() {
 
   // PWA install prompt
   useEffect(() => {
+    const standaloneMode =
+      window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setIsStandalone(Boolean(standaloneMode));
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredInstall(e);
@@ -163,9 +169,37 @@ export default function SettingsPage() {
     if (result.outcome === "accepted") setDeferredInstall(null);
   };
 
+  const triggerInstall = async () => {
+    if (isStandalone) {
+      toast.success(language === "fr" ? "Application deja installee" : "App already installed");
+      return;
+    }
+
+    if (deferredInstall) {
+      await installPWA();
+      return;
+    }
+
+    toast.message(
+      language === "fr"
+        ? "Utilisez le menu du navigateur puis 'Installer l'application'."
+        : "Use your browser menu and choose 'Install app'."
+    );
+  };
+
   const monthTxs = transactions.filter((tx) =>
     tx.date.startsWith(new Date().toISOString().slice(0, 7)),
   );
+
+  const totalMoneyLent = transactions
+    .filter((tx) => tx.type === "expense" && tx.categoryId === "money-lent")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const totalDebtRepaid = transactions
+    .filter((tx) => tx.type === "income" && tx.categoryId === "debt-repaid")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+
+  const debtOutstanding = Math.max(totalMoneyLent - totalDebtRepaid, 0);
 
   return (
     <AppShell>
@@ -380,26 +414,70 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* PWA Install */}
-        {deferredInstall && (
-          <div className="card bg-surface-2 border border-surface-3">
-            <h2 className="font-semibold mb-1 text-sm">{t.installApp}</h2>
-            <p
-              className="text-xs mb-3"
-              style={{ color: "oklch(0.60 0.01 265)" }}
-            >
-              {t.installHint}
-            </p>
-            <button
-              className="btn btn-primary flex items-center gap-1.5"
-              onClick={installPWA}
-              id="install-pwa-btn"
-            >
-              <Download size={15} />
-              {t.installApp}
-            </button>
+        {/* Debt tracking */}
+        <div className="card bg-surface-2 border border-surface-3">
+          <h2 className="font-semibold mb-3 text-sm">{t.debtTracking}</h2>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+            <div className="rounded-xl border border-surface-3 bg-surface p-3">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.moneyLent}
+              </p>
+              <p className="mt-1 text-sm font-bold text-black dark:text-white">
+                {selectedCurrency}
+                {totalMoneyLent.toFixed(2)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-surface-3 bg-surface p-3">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.debtRepaid}
+              </p>
+              <p className="mt-1 text-sm font-bold text-black dark:text-white">
+                {selectedCurrency}
+                {totalDebtRepaid.toFixed(2)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-surface-3 bg-surface p-3">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t.debtOutstanding}
+              </p>
+              <p className="mt-1 text-sm font-bold text-amber-600 dark:text-amber-500">
+                {selectedCurrency}
+                {debtOutstanding.toFixed(2)}
+              </p>
+            </div>
           </div>
-        )}
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            {language === "fr"
+              ? "Utilisez les categories 'Argent prete' et 'Remboursement' dans vos transactions."
+              : "Use the 'Money Lent' and 'Debt Repaid' categories in transactions."}
+          </p>
+          <Link href="/bulk" className="btn btn-secondary btn-sm w-fit">
+            {t.addTransaction}
+          </Link>
+        </div>
+
+        {/* PWA Install */}
+        <div className="card bg-surface-2 border border-surface-3">
+          <h2 className="font-semibold mb-1 text-sm">{t.installApp}</h2>
+          <p
+            className="text-xs mb-3"
+            style={{ color: "oklch(0.60 0.01 265)" }}
+          >
+            {t.installHint}
+          </p>
+          <button
+            className="btn btn-primary flex items-center gap-1.5"
+            onClick={triggerInstall}
+            id="install-pwa-btn"
+          >
+            <Download size={15} />
+            {isStandalone
+              ? language === "fr"
+                ? "Application installee"
+                : "App Installed"
+              : t.installApp}
+          </button>
+        </div>
 
         {/* Danger zone */}
         <div

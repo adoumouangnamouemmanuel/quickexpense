@@ -1,12 +1,14 @@
 {
   "name": "QuickExpense",
   "short_name": "QuickExpense",
+  "id": "/",
+  "scope": "/",
   "description": "A beautiful local-first expense tracker. Track income and expenses offline. No account needed.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f8f7ff",
-  "theme_color": "#7c3aed",
+  "background_color": "#f2f2f7",
+  "theme_color": "#0f172a",
   "categories": ["finance", "productivity"],
   "icons": [
     {

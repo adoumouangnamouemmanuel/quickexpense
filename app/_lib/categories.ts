@@ -91,6 +91,22 @@ export const DEFAULT_CATEGORIES: Category[] = [
     isCustom: false,
   },
   {
+    id: 'money-lent',
+    nameEn: 'Money Lent',
+    nameFr: 'Argent prete',
+    icon: 'HandCoins',
+    color: '#0ea5a4',
+    isCustom: false,
+  },
+  {
+    id: 'debt-repaid',
+    nameEn: 'Debt Repaid',
+    nameFr: 'Remboursement',
+    icon: 'CircleDollarSign',
+    color: '#14b8a6',
+    isCustom: false,
+  },
+  {
     id: 'other',
     nameEn: 'Other',
     nameFr: 'Autre',
@@ -109,9 +125,12 @@ export async function seedCategories(): Promise<void> {
   if (count === 0) {
     await db.categories.bulkPut(DEFAULT_CATEGORIES);
   } else {
+    const defaultById = new Map(DEFAULT_CATEGORIES.map((cat) => [cat.id, cat]));
+
     // Migration: Update any existing categories that still use old emojis instead of Lucide strings
     const existing = await db.categories.toArray();
     const toUpdate: Category[] = [];
+    const existingIds = new Set(existing.map((cat) => cat.id));
     
     // Map between old emojis and new Lucide strings
     const emojiMap: Record<string, string> = {
@@ -128,6 +147,8 @@ export async function seedCategories(): Promise<void> {
       '💼': 'Wallet',
       '📦': 'HelpCircle',
       '🏷️': 'Tag', // Custom category default icon
+      '🤝': 'HandCoins',
+      '💸': 'CircleDollarSign',
     };
 
     for (const cat of existing) {
@@ -143,6 +164,17 @@ export async function seedCategories(): Promise<void> {
 
     if (toUpdate.length > 0) {
       await db.categories.bulkPut(toUpdate);
+    }
+
+    // Backfill any newly added default categories for existing users.
+    const missingDefaults = DEFAULT_CATEGORIES.filter((cat) => !existingIds.has(cat.id));
+    if (missingDefaults.length > 0) {
+      await db.categories.bulkPut(
+        missingDefaults.map((cat) => ({
+          ...defaultById.get(cat.id)!,
+          isCustom: false,
+        }))
+      );
     }
   }
 }

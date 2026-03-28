@@ -1,24 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { ArrowLeft, CheckCircle2, ChevronDown, Plus, Save, Trash2, X } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { db, type Transaction, type TransactionType, type Category } from '../_lib/db';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { IconRenderer } from '../_components/IconRenderer';
+import { ThemeToggle } from '../_components/ThemeToggle';
+import { DEFAULT_CATEGORIES } from '../_lib/categories';
+import { db, type Transaction, type TransactionType } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
 import { todayISO } from '../_lib/utils';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { DEFAULT_CATEGORIES } from '../_lib/categories';
-import { ArrowLeft, Save, Plus, Trash2, CheckCircle2, ChevronDown, X } from 'lucide-react';
-import { IconRenderer } from '../_components/IconRenderer';
-import Link from 'next/link';
-import { toast } from 'sonner';
 
 interface RowData {
   id: string;
   amount: string;
   type: TransactionType;
   categoryId: string;
+  personName: string;
   note: string;
 }
+
+const DEBT_CATEGORY_IDS = new Set(['money-lent', 'debt-repaid']);
 
 export default function QuickAddPage() {
   const { t, language } = useLanguage();
@@ -42,6 +46,7 @@ export default function QuickAddPage() {
         amount: '',
         type: 'expense' as TransactionType,
         categoryId: 'food',
+        personName: '',
         note: ''
       }));
       setRows(initial);
@@ -58,6 +63,7 @@ export default function QuickAddPage() {
       amount: '',
       type: 'expense',
       categoryId: 'food',
+      personName: '',
       note: ''
     }]);
   };
@@ -74,23 +80,44 @@ export default function QuickAddPage() {
       return !isNaN(amt) && amt > 0;
     });
 
+    const missingPersonName = validRows.some(
+      (r) => DEBT_CATEGORY_IDS.has(r.categoryId) && !r.personName.trim()
+    );
+
     if (validRows.length === 0) {
       toast.error('No valid transactions to save. Enter amounts first.');
       return;
     }
 
+    if (missingPersonName) {
+      toast.error(t.personNameRequired || "Please enter the person's name for debt entries.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const txs = validRows.map(r => ({
+      const txs = validRows.map(r => {
+        const person = r.personName.trim();
+        const isDebtEntry = DEBT_CATEGORY_IDS.has(r.categoryId);
+        const composedNote = isDebtEntry
+          ? (r.note.trim() ? `${person}: ${r.note.trim()}` : person)
+          : r.note.trim();
+
+        const composedTags = isDebtEntry
+          ? [`person:${person.toLowerCase()}`]
+          : [];
+
+        return {
         amount: parseFloat(r.amount),
         type: r.type,
         categoryId: r.categoryId,
         date: todayISO(),
-        note: r.note.trim(),
-        tags: [],
+        note: composedNote,
+        tags: composedTags,
         currency: '$', // Simplified for multi-add, assume default
         createdAt: Date.now() + Math.random(), // slight offset for stable sorting
-      })) as Transaction[];
+      };
+      }) as Transaction[];
 
       await db.transactions.bulkAdd(txs);
       toast.success(`Successfully saved ${validRows.length} transactions!`);
@@ -106,7 +133,7 @@ export default function QuickAddPage() {
   const getCategory = (id: string) => categories?.find(c => c.id === id) || categories?.[0];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0f172a] pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-brand-900 pb-24">
       <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 sticky top-0 z-30 px-4 flex items-center justify-between shadow-sm h-14">
         <div className="flex items-center gap-2">
           <Link href="/" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors text-black dark:text-white">
@@ -114,32 +141,38 @@ export default function QuickAddPage() {
           </Link>
           <h1 className="text-base font-bold text-black dark:text-white">{t.fastEntry}</h1>
         </div>
-        <button 
-          onClick={handleSaveAll}
-          disabled={saving}
-          className="btn btn-primary px-4 py-1.5 h-auto text-sm flex items-center gap-1.5 rounded-lg font-semibold shadow-sm transition-all"
-        >
-          {saving ? <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Save size={15} />}
-          {t.save}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="rounded-xl border border-surface-3 bg-surface-glass backdrop-blur-xl">
+            <ThemeToggle />
+          </div>
+          <button 
+            onClick={handleSaveAll}
+            disabled={saving}
+            className="btn btn-primary px-3 sm:px-4 py-1.5 h-auto text-sm flex items-center gap-1.5 rounded-lg font-semibold shadow-sm transition-all"
+          >
+            {saving ? <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : <Save size={15} />}
+            <span className="hidden sm:inline">{t.save}</span>
+          </button>
+        </div>
       </header>
 
       <main className="max-w-xl mx-auto p-4 sm:p-6 space-y-4">
         
         <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-4 rounded-xl flex items-start gap-3 border border-blue-100 dark:border-blue-900/50">
           <CheckCircle2 size={18} className="shrink-0 mt-0.5 text-blue-500" />
-          <p className="text-sm font-medium">Any empty blocks will be automatically skipped.</p>
+          <p className="text-sm font-medium">{t.bulkHint}</p>
         </div>
 
         {rows.map((row, index) => {
           const cat = getCategory(row.categoryId);
+          const isDebtCategory = DEBT_CATEGORY_IDS.has(row.categoryId);
           return (
             <div 
               key={row.id} 
               className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-black dark:focus-within:ring-white focus-within:border-transparent relative animate-in slide-in-from-bottom-2"
             >
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800/60 bg-gray-50 dark:bg-black/20">
-                <span className="text-[10px] font-black tracking-widest uppercase text-gray-400">Entry {index + 1}</span>
+                <span className="text-[10px] font-black tracking-widest uppercase text-gray-400">{t.entry} {index + 1}</span>
                 <button
                   onClick={() => removeRow(row.id)}
                   className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-30 disabled:hover:text-gray-400 p-1 -mr-1 rounded-md"
@@ -192,7 +225,7 @@ export default function QuickAddPage() {
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${cat?.color}20`, color: cat?.color }}>
                       {cat && <IconRenderer name={cat.icon} size={14} />}
                     </div>
-                    <span className="text-xs font-semibold truncate flex-1 text-black dark:text-white">
+                    <span className="text-[11px] font-semibold leading-tight whitespace-normal wrap-break-word flex-1 text-black dark:text-white text-left">
                       {cat ? (language === 'fr' ? cat.nameFr : cat.nameEn) : '...'}
                     </span>
                     <ChevronDown size={14} className="text-gray-400 group-hover:text-black dark:group-hover:text-white" />
@@ -201,11 +234,25 @@ export default function QuickAddPage() {
 
                 <input
                   type="text"
-                  placeholder={t.enterNote || 'Note (optional)'}
+                  placeholder={
+                    isDebtCategory
+                      ? (language === 'fr' ? 'Commentaire (optionnel)' : 'Context (optional)')
+                      : (t.enterNote || 'Note (optional)')
+                  }
                   value={row.note}
                   onChange={e => updateRow(row.id, 'note', e.target.value)}
                   className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-3 text-xs focus:outline-none focus:border-black dark:focus:border-white transition-colors text-black dark:text-white font-medium"
                 />
+
+                {isDebtCategory && (
+                  <input
+                    type="text"
+                    placeholder={t.enterPersonName || 'Who is this debt for?'}
+                    value={row.personName}
+                    onChange={e => updateRow(row.id, 'personName', e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-3 text-xs focus:outline-none focus:border-black dark:focus:border-white transition-colors text-black dark:text-white font-medium"
+                  />
+                )}
               </div>
             </div>
           );
@@ -216,7 +263,7 @@ export default function QuickAddPage() {
           className="w-full border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-black dark:hover:border-white text-gray-500 hover:text-black dark:hover:text-white font-bold flex items-center justify-center gap-2 rounded-2xl py-6 transition-all outline-none"
         >
           <Plus size={20} />
-          {language === 'fr' ? 'Ajouter une ligne' : 'Add Another Entry'}
+          {t.addAnotherEntry}
         </button>
 
       </main>
@@ -225,7 +272,7 @@ export default function QuickAddPage() {
       {pickingCategoryForRow && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-md p-0" onClick={() => setPickingCategoryForRow(null)}>
           <div 
-            className="bg-white dark:bg-neutral-900 w-full rounded-t-[2rem] p-6 pb-[env(safe-area-inset-bottom,24px)] animate-in slide-in-from-bottom duration-300 shadow-2xl"
+            className="bg-white dark:bg-neutral-900 w-full rounded-t-4xl p-6 pb-[env(safe-area-inset-bottom,24px)] animate-in slide-in-from-bottom duration-300 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full mx-auto mb-6 opacity-50" />
@@ -237,7 +284,7 @@ export default function QuickAddPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto hide-scrollbar">
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto hide-scrollbar">
               {categories.map(cat => (
                 <button
                   key={cat.id}
@@ -250,7 +297,7 @@ export default function QuickAddPage() {
                   <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm" style={{ backgroundColor: `${cat.color}15`, color: cat.color }}>
                     <IconRenderer name={cat.icon} size={24} />
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 text-center truncate w-full group-hover:text-black dark:group-hover:text-white">
+                  <span className="text-[10px] leading-tight font-bold text-gray-500 dark:text-gray-400 text-center whitespace-normal wrap-break-word w-full min-h-8 group-hover:text-black dark:group-hover:text-white">
                     {language === 'fr' ? cat.nameFr : cat.nameEn}
                   </span>
                 </button>

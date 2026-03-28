@@ -1,14 +1,15 @@
 "use client";
 
 import {
-  ChevronDown,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  TrendingUp,
+    ChevronDown,
+    HandCoins,
+    Pencil,
+    Plus,
+    Search,
+    Trash2,
+    TrendingUp,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { db, type Category, type Transaction } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
@@ -22,6 +23,7 @@ interface TransactionListProps {
   currency: string;
   showFilters?: boolean;
   limit?: number;
+  initialCategoryFilter?: string;
 }
 
 type SortKey = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
@@ -35,15 +37,47 @@ export function TransactionList({
   currency,
   showFilters = true,
   limit,
+  initialCategoryFilter = "all",
 }: TransactionListProps) {
   const { t, language } = useLanguage();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TxTypeFilter>("all");
-  const [catFilter, setCatFilter] = useState("all");
+  const [catFilter, setCatFilter] = useState(initialCategoryFilter);
   const [sort, setSort] = useState<SortKey>("date-desc");
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [activeMenu, setActiveMenu] = useState<"sort" | "cat" | null>(null);
+
+  useEffect(() => {
+    setCatFilter(initialCategoryFilter);
+  }, [initialCategoryFilter]);
+
+  const DEBT_CATEGORY_IDS = useMemo(
+    () => new Set(["money-lent", "debt-repaid"]),
+    [],
+  );
+
+  const getDebtDisplay = useCallback(
+    (tx: Transaction) => {
+      const personTag = tx.tags?.find((tag) => tag.startsWith("person:"));
+      const rawNote = tx.note?.trim() ?? "";
+      const notePrefix = rawNote.includes(":")
+        ? rawNote.split(":", 1)[0].trim()
+        : "";
+      const personFromTag = personTag?.replace(/^person:/, "").trim() ?? "";
+      const person = notePrefix || personFromTag;
+      const noteWithoutPrefix =
+        person && rawNote.toLowerCase().startsWith(`${person.toLowerCase()}:`)
+          ? rawNote.slice(person.length + 1).trim()
+          : rawNote;
+
+      return {
+        person,
+        note: noteWithoutPrefix,
+      };
+    },
+    [],
+  );
 
   const getCategoryName = useCallback(
     (id: string) => {
@@ -84,8 +118,11 @@ export function TransactionList({
 
     if (typeFilter !== "all")
       list = list.filter((tx) => tx.type === typeFilter);
-    if (catFilter !== "all")
+    if (catFilter === "debt") {
+      list = list.filter((tx) => DEBT_CATEGORY_IDS.has(tx.categoryId));
+    } else if (catFilter !== "all") {
       list = list.filter((tx) => tx.categoryId === catFilter);
+    }
 
     list.sort((a, b) => {
       switch (sort) {
@@ -110,6 +147,7 @@ export function TransactionList({
     sort,
     limit,
     getCategoryName,
+    DEBT_CATEGORY_IDS,
   ]);
 
   const handleDelete = async (id: number) => {
@@ -177,7 +215,7 @@ export function TransactionList({
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
                 {activeMenu === "sort" && (
-                  <div className="absolute top-full left-0 mt-2 z-50 rounded-2xl shadow-2xl p-2 min-w-35 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3">
+                  <div className="absolute top-full mt-2 z-50 rounded-2xl shadow-2xl p-2 w-44 max-w-[calc(100vw-1rem)] left-0 sm:left-auto sm:right-0 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3">
                     {[
                       { id: "date-desc", label: t.newest },
                       { id: "date-asc", label: t.oldest },
@@ -216,17 +254,34 @@ export function TransactionList({
                   />
                   {catFilter === "all"
                     ? t.category
+                    : catFilter === "debt"
+                      ? t.debtOutstanding
                     : language === "fr"
                       ? categories.find((c) => c.id === catFilter)?.nameFr
                       : categories.find((c) => c.id === catFilter)?.nameEn}
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
                 {activeMenu === "cat" && (
-                  <div className="absolute top-full left-0 mt-2 z-50 rounded-2xl shadow-2xl p-3 min-w-70 sm:min-w-80 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3">
+                  <div className="absolute top-full mt-2 z-50 rounded-2xl shadow-2xl p-3 w-[min(22rem,calc(100vw-1rem))] left-0 sm:left-auto sm:right-0 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3">
                     <div className="text-[10px] font-black tracking-widest uppercase text-gray-400 mb-3 px-1">
                       {t.category}
                     </div>
                     <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
+                      <button
+                        onClick={() => {
+                          setCatFilter("debt");
+                          setActiveMenu(null);
+                        }}
+                        className={`w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all ${catFilter === "debt" ? "bg-black text-white dark:bg-white dark:text-black border-transparent" : "bg-surface border-surface-3 text-gray-600 dark:text-gray-300"}`}
+                      >
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-100/80 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 shrink-0">
+                          <HandCoins size={14} />
+                        </div>
+                        <span className="text-xs font-semibold truncate">
+                          {t.debtOutstanding}
+                        </span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setCatFilter("all");
@@ -314,15 +369,37 @@ export function TransactionList({
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">
-                  {tx.note || getCategoryName(tx.categoryId)}
-                </p>
-                <p
-                  className="text-xs mt-0.5"
-                  style={{ color: "oklch(0.60 0.01 265)" }}
-                >
-                  {formatDate(tx.date)} · {getCategoryName(tx.categoryId)}
-                </p>
+                {DEBT_CATEGORY_IDS.has(tx.categoryId) ? (
+                  (() => {
+                    const debtDisplay = getDebtDisplay(tx);
+                    return (
+                      <>
+                        <p className="font-medium text-sm truncate">
+                          {debtDisplay.person || getCategoryName(tx.categoryId)}
+                        </p>
+                        <p
+                          className="text-xs mt-0.5 truncate"
+                          style={{ color: "oklch(0.60 0.01 265)" }}
+                        >
+                          {formatDate(tx.date)} · {getCategoryName(tx.categoryId)}
+                          {debtDisplay.note ? ` · ${debtDisplay.note}` : ""}
+                        </p>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <>
+                    <p className="font-medium text-sm truncate">
+                      {tx.note || getCategoryName(tx.categoryId)}
+                    </p>
+                    <p
+                      className="text-xs mt-0.5"
+                      style={{ color: "oklch(0.60 0.01 265)" }}
+                    >
+                      {formatDate(tx.date)} · {getCategoryName(tx.categoryId)}
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-2 ml-2">

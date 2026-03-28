@@ -1,15 +1,14 @@
 // QuickExpense Service Worker
 // Cache-first strategy for offline support
 
-const CACHE_NAME = 'quickexpense-v1';
+const CACHE_NAME = 'quickexpense-v2';
 
 // Core assets to pre-cache
 const PRECACHE_URLS = [
   '/',
-  '/transactions',
-  '/reports',
-  '/settings',
   '/manifest.json',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
 // ─── Install ──────────────────────────────────────────────────────────────────
@@ -45,25 +44,43 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Skip Next.js internal routes and HMR
-  if (url.pathname.startsWith('/_next/webpack-hmr') ||
-      url.pathname.startsWith('/_next/static/chunks/')) {
+  // Skip Next.js internals and let the browser handle fresh chunks.
+  if (url.pathname.startsWith('/_next/')) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached version, then update in background
-        const fetchPromise = fetch(event.request).then((networkResponse) => {
+  // Keep HTML navigations fresh to avoid stale RSC/chunk references.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
           if (networkResponse.ok) {
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, networkResponse.clone());
             });
           }
           return networkResponse;
+        })
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          return cached || caches.match('/');
+        })
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        // Return cached version, then update in background.
+        fetch(event.request).then((networkResponse) => {
+          if (networkResponse.ok) {
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, networkResponse.clone());
+            });
+          }
         }).catch(() => cachedResponse);
-        
+
         return cachedResponse;
       }
 

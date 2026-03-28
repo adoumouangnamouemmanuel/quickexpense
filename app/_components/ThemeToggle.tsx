@@ -2,7 +2,7 @@
 
 // Theme toggle button (dark/light)
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "../_lib/theme";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
