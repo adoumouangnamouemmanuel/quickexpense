@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+
 
 // Dashboard Charts: PieChart (by category) + LineChart (daily spending)
 import {
@@ -33,6 +35,7 @@ interface ExpensePieChartProps {
 
 export function ExpensePieChart({ transactions, categories, currency }: ExpensePieChartProps) {
   const { t, language } = useLanguage();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const expenses = transactions.filter(tx => tx.type === 'expense');
 
@@ -50,6 +53,22 @@ export function ExpensePieChart({ transactions, categories, currency }: ExpenseP
       color: cat?.color ?? CHART_COLORS[i % CHART_COLORS.length],
     };
   }).sort((a, b) => b.value - a.value);
+
+  useEffect(() => {
+    if (data.length === 0) {
+      setSelectedCategory(null);
+      return;
+    }
+
+    if (!selectedCategory || !data.some((item) => item.name === selectedCategory)) {
+      setSelectedCategory(data[0].name);
+    }
+  }, [data, selectedCategory]);
+
+  const selectedIndex = useMemo(
+    () => data.findIndex((item) => item.name === selectedCategory),
+    [data, selectedCategory],
+  );
 
   if (data.length === 0) {
     return (
@@ -71,9 +90,21 @@ export function ExpensePieChart({ transactions, categories, currency }: ExpenseP
           paddingAngle={3}
           dataKey="value"
           strokeWidth={0}
+          onClick={(_, index) => {
+            const name = data[index]?.name;
+            if (!name) return;
+            setSelectedCategory((prev) => (prev === name ? null : name));
+          }}
         >
           {data.map((entry, i) => (
-            <Cell key={i} fill={entry.color} />
+            <Cell
+              key={i}
+              fill={entry.color}
+              fillOpacity={selectedIndex === -1 || selectedIndex === i ? 1 : 0.28}
+              stroke={selectedIndex === i ? 'oklch(0.18 0.01 265)' : 'transparent'}
+              strokeWidth={selectedIndex === i ? 2 : 0}
+              style={{ cursor: 'pointer' }}
+            />
           ))}
         </Pie>
         <Tooltip
@@ -155,6 +186,7 @@ interface SpendingLineChartProps {
 
 export function SpendingLineChart({ transactions, currency, days = 30, startDate, endDate }: SpendingLineChartProps) {
   const { t } = useLanguage();
+  const [selectedSeries, setSelectedSeries] = useState<'all' | 'expenses' | 'income'>('all');
 
   // Build day-by-day aggregation
   const dayMap: Record<string, { expenses: number; income: number }> = {};
@@ -203,52 +235,80 @@ export function SpendingLineChart({ transactions, currency, days = 30, startDate
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220} className="chart-shell">
-      <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.82 0.01 265 / 0.3)" />
-        <XAxis
-          dataKey="date"
-          tick={{ fontSize: 11 }}
-          tickLine={false}
-          axisLine={false}
-          interval={Math.floor(effectiveDays / 7)}
-        />
-        <YAxis
-          tick={{ fontSize: 11 }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => `${currency}${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
-        />
-        <Tooltip
-          cursor={false}
-          formatter={(value, name) => [
-            formatCurrency(Number(value ?? 0), currency),
-            name === 'expenses' ? t.expense : t.income,
-          ]}
-          contentStyle={{
-            borderRadius: '0.75rem',
-            border: 'none',
-            boxShadow: '0 8px 32px rgb(0 0 0 / 0.15)',
-            fontSize: '0.875rem',
-          }}
-        />
-        <Line
-          type="monotone"
-          dataKey="expenses"
-          stroke="oklch(0.58 0.22 25)"
-          strokeWidth={2.5}
-          dot={false}
-          activeDot={{ r: 4 }}
-        />
-        <Line
-          type="monotone"
-          dataKey="income"
-          stroke="oklch(0.55 0.18 145)"
-          strokeWidth={2.5}
-          dot={false}
-          activeDot={{ r: 4 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setSelectedSeries('all')}
+          className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-colors ${selectedSeries === 'all' ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-surface-2 text-gray-500 border border-surface-3'}`}
+        >
+          {t.all}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedSeries('expenses')}
+          className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-colors ${selectedSeries === 'expenses' ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-surface-2 text-gray-500 border border-surface-3'}`}
+        >
+          {t.expense}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedSeries('income')}
+          className={`px-2 py-1 rounded-full text-[11px] font-semibold transition-colors ${selectedSeries === 'income' ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-surface-2 text-gray-500 border border-surface-3'}`}
+        >
+          {t.income}
+        </button>
+      </div>
+
+      <ResponsiveContainer width="100%" height={220} className="chart-shell">
+        <LineChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.82 0.01 265 / 0.3)" />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            interval={Math.floor(effectiveDays / 7)}
+          />
+          <YAxis
+            tick={{ fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v) => `${currency}${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}`}
+          />
+          <Tooltip
+            cursor={false}
+            formatter={(value, name) => [
+              formatCurrency(Number(value ?? 0), currency),
+              name === 'expenses' ? t.expense : t.income,
+            ]}
+            contentStyle={{
+              borderRadius: '0.75rem',
+              border: 'none',
+              boxShadow: '0 8px 32px rgb(0 0 0 / 0.15)',
+              fontSize: '0.875rem',
+            }}
+          />
+          <Line
+            type="monotone"
+            dataKey="expenses"
+            stroke="oklch(0.58 0.22 25)"
+            strokeWidth={selectedSeries === 'expenses' ? 3.4 : 2.5}
+            strokeOpacity={selectedSeries === 'all' || selectedSeries === 'expenses' ? 1 : 0.2}
+            dot={false}
+            activeDot={{ r: selectedSeries === 'all' || selectedSeries === 'expenses' ? 4 : 0 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="income"
+            stroke="oklch(0.55 0.18 145)"
+            strokeWidth={selectedSeries === 'income' ? 3.4 : 2.5}
+            strokeOpacity={selectedSeries === 'all' || selectedSeries === 'income' ? 1 : 0.2}
+            dot={false}
+            activeDot={{ r: selectedSeries === 'all' || selectedSeries === 'income' ? 4 : 0 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
