@@ -19,6 +19,7 @@ export const CURRENCY_OPTIONS = [
   { symbol: '¥', label: 'JPY (¥)' },
   { symbol: 'CFA', label: 'CFA' },
   { symbol: '₦', label: 'NGN (₦)' },
+  { symbol: 'GH₵', label: 'GHS (GH₵)' },
   { symbol: 'C$', label: 'CAD (C$)' },
   { symbol: 'CHF', label: 'CHF' },
 ] as const;

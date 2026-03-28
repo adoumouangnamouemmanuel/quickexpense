@@ -8,6 +8,7 @@ import { db, type Transaction, type Category } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
 import { formatCurrency, formatDate } from '../_lib/utils';
 import { AddTransactionModal } from './AddTransactionModal';
+import { IconRenderer } from './IconRenderer';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -162,10 +163,10 @@ export function TransactionList({
             <div key={tx.id} className="transaction-row group">
               {/* Icon */}
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0"
-                style={{ background: `${getCategoryColor(tx.categoryId)}18` }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: `${getCategoryColor(tx.categoryId)}20`, color: getCategoryColor(tx.categoryId) }}
               >
-                {getCategoryIcon(tx.categoryId)}
+                <IconRenderer name={getCategoryIcon(tx.categoryId)} size={20} />
               </div>
 
               {/* Info */}

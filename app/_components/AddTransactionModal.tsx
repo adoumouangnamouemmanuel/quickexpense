@@ -9,6 +9,7 @@ import { useLanguage } from '../_lib/i18n';
 import { todayISO } from '../_lib/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { DEFAULT_CATEGORIES } from '../_lib/categories';
+import { IconRenderer } from './IconRenderer';
 
 interface Props {
   open: boolean;
@@ -189,8 +190,10 @@ export function AddTransactionModal({ open, onClose, editTx, defaultType = 'expe
                 onClick={() => setCategoryId(cat.id)}
                 id={`cat-btn-${cat.id}`}
               >
-                <span className="text-lg">{cat.icon}</span>
-                <span className="text-center leading-tight">{getCategoryName(cat)}</span>
+                <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface)] shadow-sm">
+                  <IconRenderer name={cat.icon} size={16} />
+                </div>
+                <span className="text-center leading-tight truncate w-full px-1">{getCategoryName(cat)}</span>
               </button>
             ))}
           </div>

@@ -13,9 +13,14 @@ import { AppShell } from '../_components/AppShell';
 import { ThemeToggle } from '../_components/ThemeToggle';
 import { LanguageSwitcher } from '../_components/LanguageSwitcher';
 import { BudgetProgress } from '../_components/BudgetProgress';
+import { useAuth } from '../_lib/auth';
+import { IconRenderer } from '../_components/IconRenderer';
+import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
+  const router = useRouter();
 
   // ─── DB data ────────────────────────────────────────────────────────────────
 
@@ -23,6 +28,7 @@ export default function SettingsPage() {
   const budgets = useLiveQuery(() => db.budgets.toArray(), []) ?? [];
   const categories = useLiveQuery(() => db.categories.toArray(), [], DEFAULT_CATEGORIES) ?? DEFAULT_CATEGORIES;
   const transactions = useLiveQuery(() => db.transactions.toArray(), []) ?? [];
+  const customCatsCount = categories.filter(c => c.isCustom).length;
 
   const currency = settings.find(s => s.key === 'currency')?.value ?? '$';
 
@@ -94,13 +100,20 @@ export default function SettingsPage() {
 
   const addCustomCategory = async () => {
     if (!newCatName.trim()) return;
+    
+    // Mock Freemium Check
+    if (!user?.isPro && customCatsCount >= 2) {
+      router.push('/premium');
+      return;
+    }
+
     await seedCategories();
     const id = newCatName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     await db.categories.put({
       id: `custom-${id}-${Date.now()}`,
       nameEn: newCatName,
       nameFr: newCatName,
-      icon: '🏷️',
+      icon: 'Tag',
       color: '#6366f1',
       isCustom: true,
     });
@@ -208,9 +221,11 @@ export default function SettingsPage() {
               const catName = language === 'fr' ? cat.nameFr : cat.nameEn;
               return (
                 <div key={cat.id}>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span>{cat.icon}</span>
-                    <span className="text-sm font-medium flex-1">{catName}</span>
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '25', color: cat.color }}>
+                      <IconRenderer name={cat.icon} size={14} />
+                    </div>
+                    <span className="text-sm font-medium flex-1 truncate">{catName}</span>
                     <input
                       type="number"
                       className="input"
@@ -244,9 +259,12 @@ export default function SettingsPage() {
         </div>
 
         {/* Custom categories */}
-        <div className="card">
-          <h2 className="font-semibold mb-3 text-sm">Custom Categories</h2>
-          <div className="flex gap-2 mb-3">
+        <div className="card text-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-sm">Custom Categories</h2>
+            <span className="text-[oklch(0.60_0.01_265)] text-xs">{customCatsCount} / {user?.isPro ? '∞' : '2'}</span>
+          </div>
+          <div className="flex gap-2 mb-4">
             <input
               type="text"
               className="input flex-1"
@@ -260,19 +278,23 @@ export default function SettingsPage() {
               <PlusCircle size={15} />
             </button>
           </div>
-          {categories.filter(c => c.isCustom).map(cat => (
-            <div key={cat.id} className="flex items-center gap-2 mb-1.5">
-              <span>{cat.icon}</span>
-              <span className="text-sm flex-1">{cat.nameEn}</span>
-              <button
-                className="btn btn-ghost btn-icon btn-sm"
-                style={{ color: 'oklch(0.58 0.22 25)' }}
-                onClick={() => deleteCustomCategory(cat.id)}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ))}
+          <div className="flex flex-col gap-2">
+            {categories.filter(c => c.isCustom).map(cat => (
+              <div key={cat.id} className="flex items-center gap-3 p-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-surface-3)]">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: cat.color + '25', color: cat.color }}>
+                  <IconRenderer name={cat.icon} size={14} />
+                </div>
+                <span className="text-sm flex-1 font-medium">{cat.nameEn}</span>
+                <button
+                  className="btn btn-ghost btn-icon btn-sm"
+                  style={{ color: 'oklch(0.58 0.22 25)' }}
+                  onClick={() => deleteCustomCategory(cat.id)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* PWA Install */}
