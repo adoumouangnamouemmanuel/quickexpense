@@ -9,7 +9,7 @@ import {
     Trash2,
     TrendingUp,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { db, type Category, type Transaction } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
@@ -47,6 +47,13 @@ export function TransactionList({
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [activeMenu, setActiveMenu] = useState<"sort" | "cat" | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: 176,
+  });
+  const sortBtnRef = useRef<HTMLButtonElement | null>(null);
+  const catBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setCatFilter(initialCategoryFilter);
@@ -156,6 +163,30 @@ export function TransactionList({
     setDeleteConfirmId(null);
   };
 
+  const openMenu = useCallback((menu: "sort" | "cat") => {
+    const trigger = menu === "sort" ? sortBtnRef.current : catBtnRef.current;
+    if (!trigger) {
+      setActiveMenu(menu);
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const width = Math.min(menu === "sort" ? 176 : 352, viewportWidth - 16);
+    const left = Math.max(8, Math.min(rect.left, viewportWidth - width - 8));
+
+    setMenuPos({ top: rect.bottom + 8, left, width });
+    setActiveMenu(menu);
+  }, []);
+
+  useEffect(() => {
+    if (!activeMenu) return;
+
+    const onResize = () => openMenu(activeMenu);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [activeMenu, openMenu]);
+
   return (
     <div>
       {showFilters && (
@@ -192,9 +223,14 @@ export function TransactionList({
 
               <div className="relative group">
                 <button
-                  onClick={() =>
-                    setActiveMenu(activeMenu === "sort" ? null : "sort")
-                  }
+                  ref={sortBtnRef}
+                  onClick={() => {
+                    if (activeMenu === "sort") {
+                      setActiveMenu(null);
+                    } else {
+                      openMenu("sort");
+                    }
+                  }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all text-[11px] font-bold ${activeMenu === "sort" ? "bg-black text-white dark:bg-white dark:text-black border-transparent shadow-md" : "bg-surface-2 border-surface-3 text-gray-500"}`}
                 >
                   <TrendingUp
@@ -215,7 +251,10 @@ export function TransactionList({
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
                 {activeMenu === "sort" && (
-                  <div className="absolute top-full mt-2 z-50 rounded-2xl shadow-2xl p-2 w-44 max-w-[calc(100vw-1rem)] left-0 sm:left-auto sm:right-0 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3">
+                  <div
+                    className="fixed z-120 rounded-2xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3"
+                    style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                  >
                     {[
                       { id: "date-desc", label: t.newest },
                       { id: "date-asc", label: t.oldest },
@@ -239,9 +278,14 @@ export function TransactionList({
 
               <div className="relative">
                 <button
-                  onClick={() =>
-                    setActiveMenu(activeMenu === "cat" ? null : "cat")
-                  }
+                  ref={catBtnRef}
+                  onClick={() => {
+                    if (activeMenu === "cat") {
+                      setActiveMenu(null);
+                    } else {
+                      openMenu("cat");
+                    }
+                  }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all text-[11px] font-bold ${activeMenu === "cat" ? "bg-black text-white dark:bg-white dark:text-black border-transparent shadow-md" : "bg-surface-2 border-surface-3 text-gray-500"}`}
                 >
                   <Search
@@ -262,7 +306,10 @@ export function TransactionList({
                   <ChevronDown size={10} className="opacity-50" />
                 </button>
                 {activeMenu === "cat" && (
-                  <div className="absolute top-full mt-2 z-50 rounded-2xl shadow-2xl p-3 w-[min(22rem,calc(100vw-1rem))] left-0 sm:left-auto sm:right-0 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3">
+                  <div
+                    className="fixed z-120 rounded-2xl shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200 bg-surface-2 border border-surface-3"
+                    style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                  >
                     <div className="text-[10px] font-black tracking-widest uppercase text-gray-400 mb-3 px-1">
                       {t.category}
                     </div>

@@ -210,16 +210,16 @@ export default function QuickAddPage() {
 
                 {/* Amount & Category row */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <span className="text-gray-400 font-bold">{defaultCurrency}</span>
-                    </div>
+                  <div className="flex items-center gap-2 bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2">
+                    <span className="text-gray-400 font-bold text-sm shrink-0 min-w-8 text-center">
+                      {defaultCurrency}
+                    </span>
                     <input
                       type="number"
                       placeholder="0.00"
                       value={row.amount}
                       onChange={e => updateRow(row.id, 'amount', e.target.value)}
-                      className="w-full bg-gray-50 dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl pl-8 pr-3 py-3 text-base font-bold focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                      className="w-full bg-transparent border-none p-0 text-base font-bold focus:outline-none text-black dark:text-white"
                     />
                   </div>
                   

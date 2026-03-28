@@ -1,5 +1,6 @@
 'use client';
 
+
 // Dashboard Charts: PieChart (by category) + LineChart (daily spending)
 import {
   CartesianGrid,
@@ -16,7 +17,6 @@ import {
 import type { Category, Transaction } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
 import { CHART_COLORS, formatCurrency, shortDate } from '../_lib/utils';
-
 // ─── Pie Chart ────────────────────────────────────────────────────────────────
 
 interface PieDataPoint {

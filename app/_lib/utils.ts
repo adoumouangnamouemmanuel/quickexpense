@@ -1,5 +1,5 @@
 // Utility helpers for QuickExpense
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, subDays } from 'date-fns';
+import { eachDayOfInterval, endOfMonth, format, parseISO, startOfMonth, subDays } from 'date-fns';
 
 // ─── Currency ─────────────────────────────────────────────────────────────────
 
@@ -37,12 +37,22 @@ export function formatDate(dateStr: string): string {
 
 /** Today's date as YYYY-MM-DD */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return format(new Date(), 'yyyy-MM-dd');
 }
 
 /** Current month as YYYY-MM */
 export function currentMonthISO(): string {
-  return new Date().toISOString().slice(0, 7);
+  return format(new Date(), 'yyyy-MM');
+}
+
+/** Convert Date to local YYYY-MM-DD (timezone-safe) */
+export function toLocalISODate(date: Date): string {
+  return format(date, 'yyyy-MM-dd');
+}
+
+/** Convert Date to local YYYY-MM */
+export function toLocalMonthISO(date: Date): string {
+  return format(date, 'yyyy-MM');
 }
 
 /** Get array of last N days as YYYY-MM-DD strings */
@@ -50,7 +60,7 @@ export function lastNDays(n: number): string[] {
   const today = new Date();
   return Array.from({ length: n }, (_, i) => {
     const d = subDays(today, n - 1 - i);
-    return d.toISOString().slice(0, 10);
+    return format(d, 'yyyy-MM-dd');
   });
 }
 
@@ -58,7 +68,7 @@ export function lastNDays(n: number): string[] {
 export function daysInMonth(month: string): string[] {
   const date = parseISO(`${month}-01`);
   const days = eachDayOfInterval({ start: startOfMonth(date), end: endOfMonth(date) });
-  return days.map(d => d.toISOString().slice(0, 10));
+  return days.map(d => format(d, 'yyyy-MM-dd'));
 }
 
 /** Format YYYY-MM-DD to "Mar 28" */

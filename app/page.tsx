@@ -4,8 +4,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Activity,
-  ChevronLeft,
-  ChevronRight,
   HandCoins,
   Star,
   TrendingDown,
@@ -29,15 +27,13 @@ import { useAuth } from "./_lib/auth";
 import { DEFAULT_CATEGORIES } from "./_lib/categories";
 import { db } from "./_lib/db";
 import { useLanguage } from "./_lib/i18n";
-import { currentMonthISO, formatCurrency, todayISO } from "./_lib/utils";
+import { currentMonthISO, formatCurrency, toLocalISODate } from "./_lib/utils";
 
 export default function DashboardPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
   const [periodScope, setPeriodScope] = useState<"week" | "month" | "year" | "all">("month");
-  const [chartScope, setChartScope] = useState<"week" | "month">("week");
-  const [chartAnchorDate, setChartAnchorDate] = useState(todayISO());
 
   // ─── Live data ───────────────────────────────────────────────────────────────
 
@@ -84,7 +80,7 @@ export default function DashboardPage() {
     const day = monday.getDay() || 7;
     monday.setHours(0, 0, 0, 0);
     monday.setDate(monday.getDate() - day + 1);
-    const mondayISO = monday.toISOString().slice(0, 10);
+    const mondayISO = toLocalISODate(monday);
     return allTransactions.filter((tx) => tx.date >= mondayISO);
   }, [allTransactions, periodScope]);
 
@@ -138,57 +134,44 @@ export default function DashboardPage() {
           : t.allTime;
 
   const chartRange = useMemo(() => {
-    const anchor = new Date(chartAnchorDate);
-    if (Number.isNaN(anchor.getTime())) {
-      return { start: todayISO(), end: todayISO(), label: "" };
+    if (allTransactions.length === 0) {
+      const today = toLocalISODate(new Date());
+      return { start: today, end: today };
     }
 
-    if (chartScope === "week") {
-      const start = new Date(anchor);
-      const day = start.getDay() || 7;
-      start.setDate(start.getDate() - day + 1);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
+    const now = new Date();
+    if (periodScope === "all") {
+      const sorted = [...allTransactions].sort((a, b) => a.date.localeCompare(b.date));
       return {
-        start: start.toISOString().slice(0, 10),
-        end: end.toISOString().slice(0, 10),
-        label:
-          language === "fr"
-            ? `${start.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })} - ${end.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}`
-            : `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+        start: sorted[0]?.date ?? toLocalISODate(now),
+        end: sorted[sorted.length - 1]?.date ?? toLocalISODate(now),
       };
     }
 
-    const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
-    return {
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
-      label: start.toLocaleDateString(language === "fr" ? "fr-FR" : "en-US", {
-        month: "long",
-        year: "numeric",
-      }),
-    };
-  }, [chartAnchorDate, chartScope, language]);
+    if (periodScope === "year") {
+      const start = new Date(now.getFullYear(), 0, 1);
+      const end = new Date(now.getFullYear(), 11, 31);
+      return { start: toLocalISODate(start), end: toLocalISODate(end) };
+    }
+
+    if (periodScope === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return { start: toLocalISODate(start), end: toLocalISODate(end) };
+    }
+
+    const start = new Date(now);
+    const day = start.getDay() || 7;
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - day + 1);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start: toLocalISODate(start), end: toLocalISODate(end) };
+  }, [allTransactions, periodScope]);
 
   const chartTransactions = useMemo(
     () => allTransactions.filter((tx) => tx.date >= chartRange.start && tx.date <= chartRange.end),
     [allTransactions, chartRange.end, chartRange.start],
-  );
-
-  const shiftChartRange = useCallback(
-    (direction: -1 | 1) => {
-      const base = new Date(chartAnchorDate);
-      if (Number.isNaN(base.getTime())) return;
-
-      if (chartScope === "week") {
-        base.setDate(base.getDate() + 7 * direction);
-      } else {
-        base.setMonth(base.getMonth() + direction);
-      }
-      setChartAnchorDate(base.toISOString().slice(0, 10));
-    },
-    [chartAnchorDate, chartScope],
   );
 
   return (
@@ -421,38 +404,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Pie chart */}
           <div className="card">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <h2 className="font-semibold text-sm">{t.expensesByCategory}</h2>
-              <div className="inline-flex rounded-xl p-1 bg-surface-2 border border-surface-3">
-                <button
-                  className={`px-2.5 py-1 text-[11px] rounded-lg font-semibold ${chartScope === "week" ? "bg-black text-white dark:bg-white dark:text-black" : "text-gray-500"}`}
-                  onClick={() => setChartScope("week")}
-                >
-                  {t.thisWeek}
-                </button>
-                <button
-                  className={`px-2.5 py-1 text-[11px] rounded-lg font-semibold ${chartScope === "month" ? "bg-black text-white dark:bg-white dark:text-black" : "text-gray-500"}`}
-                  onClick={() => setChartScope("month")}
-                >
-                  {t.thisMonth}
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <button className="btn btn-ghost btn-sm" onClick={() => shiftChartRange(-1)}>
-                <ChevronLeft size={14} />
-              </button>
-              <input
-                type="date"
-                value={chartAnchorDate}
-                onChange={(e) => setChartAnchorDate(e.target.value)}
-                className="input max-w-44 h-8 text-xs"
-              />
-              <button className="btn btn-ghost btn-sm" onClick={() => shiftChartRange(1)}>
-                <ChevronRight size={14} />
-              </button>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{chartRange.label}</span>
-            </div>
+            <h2 className="font-semibold text-sm mb-3">{t.expensesByCategory}</h2>
             <ExpensePieChart
               transactions={chartTransactions}
               categories={categories}

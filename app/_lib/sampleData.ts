@@ -1,5 +1,6 @@
 // Sample data seeder for QuickExpense demo mode
 import type { Transaction } from './db';
+import { toLocalISODate } from './utils';
 
 /** Generates realistic sample transactions for demo */
 export function generateSampleTransactions(): Omit<Transaction, 'id'>[] {
@@ -7,7 +8,7 @@ export function generateSampleTransactions(): Omit<Transaction, 'id'>[] {
   const mkDate = (daysAgo: number): string => {
     const d = new Date(today);
     d.setDate(d.getDate() - daysAgo);
-    return d.toISOString().slice(0, 10);
+    return toLocalISODate(d);
   };
 
   const baseTransactions: Omit<Transaction, 'id'>[] = [

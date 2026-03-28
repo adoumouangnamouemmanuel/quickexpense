@@ -20,7 +20,7 @@ import { ExportImport } from "../_components/ExportImport";
 import { useAuth } from "../_lib/auth";
 import { db } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
-import { formatCurrency } from "../_lib/utils";
+import { formatCurrency, toLocalISODate, toLocalMonthISO } from "../_lib/utils";
 
 type Period = "weekly" | "monthly" | "yearly" | "all";
 
@@ -48,8 +48,8 @@ export default function ReportsPage() {
       );
       return weeks.map((weekStart) => {
         const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
-        const startStr = weekStart.toISOString().slice(0, 10);
-        const endStr = weekEnd.toISOString().slice(0, 10);
+        const startStr = toLocalISODate(weekStart);
+        const endStr = toLocalISODate(weekEnd);
         let income = 0,
           expenses = 0;
         for (const tx of transactions) {
@@ -58,7 +58,11 @@ export default function ReportsPage() {
             else expenses += tx.amount;
           }
         }
-        return { date: format(weekStart, "MMM d"), income, expenses };
+        return {
+          date: `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d")}`,
+          income,
+          expenses,
+        };
       });
     }
 
@@ -66,7 +70,7 @@ export default function ReportsPage() {
       const months: { date: string; income: number; expenses: number }[] = [];
       for (let i = 11; i >= 0; i--) {
         const d = subMonths(new Date(), i);
-        const key = d.toISOString().slice(0, 7);
+        const key = toLocalMonthISO(d);
         const label = format(d, "MMM yy");
         let income = 0,
           expenses = 0;

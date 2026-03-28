@@ -41,7 +41,6 @@ export function BudgetProgress({ budget, transactions, category, currency }: Bud
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5 text-sm font-medium">
-          {category && <span>{category.icon}</span>}
           <span>{label}</span>
           {(exceeded || near) && (
             <AlertTriangle

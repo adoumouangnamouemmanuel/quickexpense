@@ -16,7 +16,7 @@ import { useAuth } from "../_lib/auth";
 import { DEFAULT_CATEGORIES, seedCategories } from "../_lib/categories";
 import { db } from "../_lib/db";
 import { useLanguage } from "../_lib/i18n";
-import { CURRENCY_OPTIONS } from "../_lib/utils";
+import { CURRENCY_OPTIONS, currentMonthISO } from "../_lib/utils";
 
 export default function SettingsPage() {
   const { t, language } = useLanguage();
@@ -188,7 +188,7 @@ export default function SettingsPage() {
   };
 
   const monthTxs = transactions.filter((tx) =>
-    tx.date.startsWith(new Date().toISOString().slice(0, 7)),
+    tx.date.startsWith(currentMonthISO()),
   );
 
   const totalMoneyLent = transactions
