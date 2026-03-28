@@ -448,7 +448,7 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             {language === "fr"
-              ? "Utilisez les categories 'Argent prete' et 'Remboursement' dans vos transactions."
+              ? "Utilisez la categorie 'Mes bons' dans vos transactions."
               : "Use the 'Money Lent' and 'Debt Repaid' categories in transactions."}
           </p>
           <Link href="/bulk" className="btn btn-secondary btn-sm w-fit">

@@ -2,22 +2,20 @@
 
 // Dashboard Charts: PieChart (by category) + LineChart (daily spending)
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
   CartesianGrid,
-  Legend,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
+import type { Category, Transaction } from '../_lib/db';
 import { useLanguage } from '../_lib/i18n';
-import { formatCurrency, shortDate, CHART_COLORS } from '../_lib/utils';
-import type { Transaction } from '../_lib/db';
-import type { Category } from '../_lib/db';
+import { CHART_COLORS, formatCurrency, shortDate } from '../_lib/utils';
 
 // ─── Pie Chart ────────────────────────────────────────────────────────────────
 
@@ -124,7 +122,7 @@ export function CategoryLegend({
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-2 text-sm">
           <div
-            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            className="w-2.5 h-2.5 rounded-full shrink-0"
             style={{ background: item.color }}
           />
           <span className="flex-1 truncate">{item.name}</span>
@@ -150,19 +148,29 @@ interface SpendingLineChartProps {
   transactions: Transaction[];
   currency: string;
   days?: number;
+  startDate?: string;
+  endDate?: string;
 }
 
-export function SpendingLineChart({ transactions, currency, days = 30 }: SpendingLineChartProps) {
+export function SpendingLineChart({ transactions, currency, days = 30, startDate, endDate }: SpendingLineChartProps) {
   const { t } = useLanguage();
 
   // Build day-by-day aggregation
-  const today = new Date();
   const dayMap: Record<string, { expenses: number; income: number }> = {};
 
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    dayMap[d.toISOString().slice(0, 10)] = { expenses: 0, income: 0 };
+  if (startDate && endDate) {
+    const from = new Date(startDate);
+    const to = new Date(endDate);
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+      dayMap[d.toISOString().slice(0, 10)] = { expenses: 0, income: 0 };
+    }
+  } else {
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      dayMap[d.toISOString().slice(0, 10)] = { expenses: 0, income: 0 };
+    }
   }
 
   for (const tx of transactions) {
@@ -180,6 +188,8 @@ export function SpendingLineChart({ transactions, currency, days = 30 }: Spendin
     expenses: vals.expenses,
     income: vals.income,
   }));
+
+  const effectiveDays = Math.max(data.length, 1);
 
   const hasData = data.some(d => d.expenses > 0 || d.income > 0);
 
@@ -200,7 +210,7 @@ export function SpendingLineChart({ transactions, currency, days = 30 }: Spendin
           tick={{ fontSize: 11 }}
           tickLine={false}
           axisLine={false}
-          interval={Math.floor(days / 7)}
+          interval={Math.floor(effectiveDays / 7)}
         />
         <YAxis
           tick={{ fontSize: 11 }}

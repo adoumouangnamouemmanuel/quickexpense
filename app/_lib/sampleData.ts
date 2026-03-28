@@ -1,6 +1,5 @@
 // Sample data seeder for QuickExpense demo mode
 import type { Transaction } from './db';
-import { DEFAULT_CATEGORIES } from './categories';
 
 /** Generates realistic sample transactions for demo */
 export function generateSampleTransactions(): Omit<Transaction, 'id'>[] {
@@ -11,7 +10,7 @@ export function generateSampleTransactions(): Omit<Transaction, 'id'>[] {
     return d.toISOString().slice(0, 10);
   };
 
-  return [
+  const baseTransactions: Omit<Transaction, 'id'>[] = [
     // Incomes
     { amount: 3500, type: 'income', categoryId: 'salary', date: mkDate(28), note: 'Monthly salary', tags: ['work'], currency: '$', createdAt: Date.now() - 28 * 86400000 },
     { amount: 250, type: 'income', categoryId: 'other', date: mkDate(14), note: 'Freelance project', tags: ['freelance'], currency: '$', createdAt: Date.now() - 14 * 86400000 },
@@ -36,18 +35,56 @@ export function generateSampleTransactions(): Omit<Transaction, 'id'>[] {
     { amount: 30, type: 'expense', categoryId: 'groceries', date: mkDate(1), note: 'Groceries', tags: [], currency: '$', createdAt: Date.now() - 1 * 86400000 },
     { amount: 12, type: 'expense', categoryId: 'food', date: mkDate(0), note: 'Lunch today', tags: [], currency: '$', createdAt: Date.now() },
   ];
+
+  return baseTransactions.map((tx) => ({
+    ...tx,
+    tags: Array.from(new Set([...(tx.tags ?? []), '__sample'])),
+  }));
 }
 
 export async function seedSampleData(): Promise<void> {
   const { db } = await import('./db');
+  const { setSetting } = await import('./db');
   const { seedCategories } = await import('./categories');
   await seedCategories();
+
+  // Replace previous sample rows to avoid stacking duplicates.
+  const existing = await db.transactions.toArray();
+  const sampleIds = existing
+    .filter((tx) => tx.tags?.includes('__sample'))
+    .map((tx) => tx.id)
+    .filter((id): id is number => id !== undefined);
+  if (sampleIds.length > 0) {
+    await db.transactions.bulkDelete(sampleIds);
+  }
+
   const transactions = generateSampleTransactions();
   await db.transactions.bulkAdd(transactions as Transaction[]);
+  await setSetting('sample_data_loaded', String(Date.now()));
+
   // Set a sample budget
-  const existing = await db.budgets.where('categoryId').equals(null as unknown as string).first();
-  if (!existing) {
+  const existingBudget = await db.budgets.where('categoryId').equals(null as unknown as string).first();
+  if (!existingBudget) {
     await db.budgets.add({ categoryId: null, amount: 2000, period: 'monthly' });
+  }
+}
+
+export async function clearSampleData(): Promise<void> {
+  const { db } = await import('./db');
+
+  const all = await db.transactions.toArray();
+  const sampleIds = all
+    .filter((tx) => tx.tags?.includes('__sample'))
+    .map((tx) => tx.id)
+    .filter((id): id is number => id !== undefined);
+
+  if (sampleIds.length > 0) {
+    await db.transactions.bulkDelete(sampleIds);
+  }
+
+  const sampleSetting = await db.settings.where('key').equals('sample_data_loaded').first();
+  if (sampleSetting?.id !== undefined) {
+    await db.settings.delete(sampleSetting.id);
   }
 }
 

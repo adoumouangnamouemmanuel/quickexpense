@@ -4,6 +4,8 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Activity,
+  ChevronLeft,
+  ChevronRight,
   HandCoins,
   Star,
   TrendingDown,
@@ -27,13 +29,15 @@ import { useAuth } from "./_lib/auth";
 import { DEFAULT_CATEGORIES } from "./_lib/categories";
 import { db } from "./_lib/db";
 import { useLanguage } from "./_lib/i18n";
-import { currentMonthISO, formatCurrency } from "./_lib/utils";
+import { currentMonthISO, formatCurrency, todayISO } from "./_lib/utils";
 
 export default function DashboardPage() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const router = useRouter();
   const [periodScope, setPeriodScope] = useState<"week" | "month" | "year" | "all">("month");
+  const [chartScope, setChartScope] = useState<"week" | "month">("week");
+  const [chartAnchorDate, setChartAnchorDate] = useState(todayISO());
 
   // ─── Live data ───────────────────────────────────────────────────────────────
 
@@ -93,11 +97,11 @@ export default function DashboardPage() {
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const balance = totalIncome - totalExpenses;
-  const totalMoneyLent = allTransactions
+  const totalMoneyLent = scopedTransactions
     .filter((tx) => tx.type === "expense" && tx.categoryId === "money-lent")
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const totalDebtRepaid = allTransactions
+  const totalDebtRepaid = scopedTransactions
     .filter((tx) => tx.type === "income" && tx.categoryId === "debt-repaid")
     .reduce((sum, tx) => sum + tx.amount, 0);
 
@@ -113,7 +117,16 @@ export default function DashboardPage() {
     toast.success("Sample data loaded!");
   }, []);
 
+  const clearSampleOnly = useCallback(async () => {
+    const { clearSampleData } = await import("./_lib/sampleData");
+    await clearSampleData();
+    toast.success("Sample data cleared");
+  }, []);
+
   const hasData = allTransactions.length > 0;
+  const hasSampleData = allTransactions.some((tx) => tx.tags?.includes("__sample"));
+  const hasUserData = allTransactions.some((tx) => !tx.tags?.includes("__sample"));
+  const showClearSample = hasSampleData && !hasUserData;
 
   const periodLabel =
     periodScope === "week"
@@ -123,6 +136,60 @@ export default function DashboardPage() {
         : periodScope === "year"
           ? t.thisYear
           : t.allTime;
+
+  const chartRange = useMemo(() => {
+    const anchor = new Date(chartAnchorDate);
+    if (Number.isNaN(anchor.getTime())) {
+      return { start: todayISO(), end: todayISO(), label: "" };
+    }
+
+    if (chartScope === "week") {
+      const start = new Date(anchor);
+      const day = start.getDay() || 7;
+      start.setDate(start.getDate() - day + 1);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return {
+        start: start.toISOString().slice(0, 10),
+        end: end.toISOString().slice(0, 10),
+        label:
+          language === "fr"
+            ? `${start.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })} - ${end.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}`
+            : `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+      };
+    }
+
+    const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    return {
+      start: start.toISOString().slice(0, 10),
+      end: end.toISOString().slice(0, 10),
+      label: start.toLocaleDateString(language === "fr" ? "fr-FR" : "en-US", {
+        month: "long",
+        year: "numeric",
+      }),
+    };
+  }, [chartAnchorDate, chartScope, language]);
+
+  const chartTransactions = useMemo(
+    () => allTransactions.filter((tx) => tx.date >= chartRange.start && tx.date <= chartRange.end),
+    [allTransactions, chartRange.end, chartRange.start],
+  );
+
+  const shiftChartRange = useCallback(
+    (direction: -1 | 1) => {
+      const base = new Date(chartAnchorDate);
+      if (Number.isNaN(base.getTime())) return;
+
+      if (chartScope === "week") {
+        base.setDate(base.getDate() + 7 * direction);
+      } else {
+        base.setMonth(base.getMonth() + direction);
+      }
+      setChartAnchorDate(base.toISOString().slice(0, 10));
+    },
+    [chartAnchorDate, chartScope],
+  );
 
   return (
     <AppShell>
@@ -296,7 +363,7 @@ export default function DashboardPage() {
             {formatCurrency(debtOutstanding, currency)}
           </p>
           <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.01 265)" }}>
-            {t.thisMonth}
+            {periodLabel}
           </p>
         </Link>
       </div>
@@ -354,16 +421,45 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           {/* Pie chart */}
           <div className="card">
-            <h2 className="font-semibold mb-3 text-sm">
-              {t.expensesByCategory}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h2 className="font-semibold text-sm">{t.expensesByCategory}</h2>
+              <div className="inline-flex rounded-xl p-1 bg-surface-2 border border-surface-3">
+                <button
+                  className={`px-2.5 py-1 text-[11px] rounded-lg font-semibold ${chartScope === "week" ? "bg-black text-white dark:bg-white dark:text-black" : "text-gray-500"}`}
+                  onClick={() => setChartScope("week")}
+                >
+                  {t.thisWeek}
+                </button>
+                <button
+                  className={`px-2.5 py-1 text-[11px] rounded-lg font-semibold ${chartScope === "month" ? "bg-black text-white dark:bg-white dark:text-black" : "text-gray-500"}`}
+                  onClick={() => setChartScope("month")}
+                >
+                  {t.thisMonth}
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <button className="btn btn-ghost btn-sm" onClick={() => shiftChartRange(-1)}>
+                <ChevronLeft size={14} />
+              </button>
+              <input
+                type="date"
+                value={chartAnchorDate}
+                onChange={(e) => setChartAnchorDate(e.target.value)}
+                className="input max-w-44 h-8 text-xs"
+              />
+              <button className="btn btn-ghost btn-sm" onClick={() => shiftChartRange(1)}>
+                <ChevronRight size={14} />
+              </button>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{chartRange.label}</span>
+            </div>
             <ExpensePieChart
-              transactions={monthTransactions}
+              transactions={chartTransactions}
               categories={categories}
               currency={currency}
             />
             <CategoryLegend
-              transactions={monthTransactions}
+              transactions={chartTransactions}
               categories={categories}
               currency={currency}
             />
@@ -373,8 +469,10 @@ export default function DashboardPage() {
           <div className="card">
             <h2 className="font-semibold mb-3 text-sm">{t.spendingTrend}</h2>
             <SpendingLineChart
-              transactions={allTransactions}
+              transactions={chartTransactions}
               currency={currency}
+              startDate={chartRange.start}
+              endDate={chartRange.end}
             />
           </div>
         </div>
@@ -399,6 +497,19 @@ export default function DashboardPage() {
             showFilters={false}
             limit={8}
           />
+        </div>
+      )}
+
+      {showClearSample && (
+        <div className="mt-4 flex justify-end">
+          <button
+            className="btn btn-ghost btn-sm text-xs"
+            style={{ color: "oklch(0.60 0.01 265)" }}
+            onClick={clearSampleOnly}
+            id="clear-sample-data-btn"
+          >
+            {t.clearDemo}
+          </button>
         </div>
       )}
 

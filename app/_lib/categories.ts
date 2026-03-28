@@ -101,7 +101,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   {
     id: 'debt-repaid',
     nameEn: 'Debt Repaid',
-    nameFr: 'Remboursement',
+    nameFr: 'Mes bons',
     icon: 'CircleDollarSign',
     color: '#14b8a6',
     isCustom: false,
@@ -152,13 +152,27 @@ export async function seedCategories(): Promise<void> {
     };
 
     for (const cat of existing) {
+      let updated: Category | null = null;
+
       if (emojiMap[cat.icon]) {
-        toUpdate.push({ ...cat, icon: emojiMap[cat.icon] });
+        updated = { ...(updated ?? cat), icon: emojiMap[cat.icon] };
       }
       // Handle the case where the user had a custom string but it's not a valid Lucide icon name
       // This is trickier, but anything containing a non-ASCII char is likely an emoji
       else if (/[\u1000-\uFFFF]/.test(cat.icon)) {
-        toUpdate.push({ ...cat, icon: 'HelpCircle' }); 
+        updated = { ...(updated ?? cat), icon: 'HelpCircle' };
+      }
+
+      // Keep debt labels consistent in French across upgrades.
+      if (cat.id === 'money-lent' && cat.nameFr !== 'Mes bons') {
+        updated = { ...(updated ?? cat), nameFr: 'Mes bons' };
+      }
+      if (cat.id === 'debt-repaid' && cat.nameFr !== 'Mes bons') {
+        updated = { ...(updated ?? cat), nameFr: 'Mes bons' };
+      }
+
+      if (updated) {
+        toUpdate.push(updated);
       }
     }
 
